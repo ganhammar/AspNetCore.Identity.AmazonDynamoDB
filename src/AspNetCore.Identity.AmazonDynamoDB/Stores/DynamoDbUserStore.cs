@@ -73,9 +73,16 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         }, cancellationToken);
     }
 
-    public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
+    public async Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(roleName);
+
+        await _context.SaveAsync(new DynamoDbRoleUser
+        {
+            RoleName = roleName,
+            UserId = user.Id,
+        }, cancellationToken);
     }
 
     public async Task<IdentityResult> CreateAsync(TUserEntity user, CancellationToken cancellationToken)

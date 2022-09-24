@@ -89,6 +89,22 @@ public static class DynamoDbUserSetup
                 },
             },
         };
+        var userRolesGlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
+        {
+            new GlobalSecondaryIndex
+            {
+                IndexName = "RoleName-index",
+                KeySchema = new List<KeySchemaElement>
+                {
+                    new KeySchemaElement("RoleName", KeyType.HASH),
+                },
+                ProvisionedThroughput = options.ProvisionedThroughput,
+                Projection = new Projection
+                {
+                    ProjectionType = ProjectionType.ALL,
+                },
+            },
+        };
 
         var tableNames = await options.Database!.ListTablesAsync(cancellationToken);
 
@@ -137,6 +153,22 @@ public static class DynamoDbUserSetup
                 options.Database,
                 options.UserLoginsTableName,
                 userLoginGlobalSecondaryIndexes,
+                cancellationToken);
+        }
+
+        if (!tableNames.TableNames.Contains(options.UserRolesTableName))
+        {
+            await CreateUserRolesTableAsync(
+                options,
+                userRolesGlobalSecondaryIndexes,
+                cancellationToken);
+        }
+        else
+        {
+            await DynamoDbUtils.UpdateSecondaryIndexes(
+                options.Database,
+                options.UserRolesTableName,
+                userRolesGlobalSecondaryIndexes,
                 cancellationToken);
         }
     }
@@ -293,6 +325,56 @@ public static class DynamoDbUserSetup
         await DynamoDbUtils.WaitForActiveTableAsync(
             options.Database,
             options.UserLoginsTableName,
+            cancellationToken);
+    }
+
+    private static async Task CreateUserRolesTableAsync(
+        DynamoDbOptions options,
+        List<GlobalSecondaryIndex>? globalSecondaryIndexes,
+        CancellationToken cancellationToken)
+    {
+        var response = await options.Database!.CreateTableAsync(new CreateTableRequest
+        {
+            TableName = options.UserRolesTableName,
+            ProvisionedThroughput = options.ProvisionedThroughput,
+            BillingMode = options.BillingMode,
+            KeySchema = new List<KeySchemaElement>
+            {
+                new KeySchemaElement
+                {
+                    AttributeName = "UserId",
+                    KeyType = KeyType.HASH,
+                },
+                new KeySchemaElement
+                {
+                    AttributeName = "RoleName",
+                    KeyType = KeyType.RANGE,
+                },
+            },
+            AttributeDefinitions = new List<AttributeDefinition>
+            {
+                new AttributeDefinition
+                {
+                    AttributeName = "UserId",
+                    AttributeType = ScalarAttributeType.S,
+                },
+                new AttributeDefinition
+                {
+                    AttributeName = "RoleName",
+                    AttributeType = ScalarAttributeType.S,
+                },
+            },
+            GlobalSecondaryIndexes = globalSecondaryIndexes,
+        }, cancellationToken);
+
+        if (response.HttpStatusCode != HttpStatusCode.OK)
+        {
+            throw new Exception($"Couldn't create table {options.UserRolesTableName}");
+        }
+
+        await DynamoDbUtils.WaitForActiveTableAsync(
+            options.Database,
+            options.UserRolesTableName,
             cancellationToken);
     }
 }

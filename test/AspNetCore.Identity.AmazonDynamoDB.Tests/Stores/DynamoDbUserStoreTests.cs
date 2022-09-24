@@ -197,4 +197,61 @@ public class DynamoDbUserStoreTests
             Assert.Equal(1, response.Table.ItemCount);
         }
     }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToAddRoleToAUserThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.AddToRoleAsync(default!, "test", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToAddRoleToAUserAndTheRoleIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.AddToRoleAsync(new(), default!, CancellationToken.None));
+            Assert.Equal("roleName", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_AddRole_When_ParametersIsCorrect()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act
+            await userStore.AddToRoleAsync(
+                new(), "test", CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserRolesTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
+        }
+    }
 }

@@ -2,6 +2,7 @@ using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
+[Collection("Sequential")]
 public class DynamoDbSetupTests
 {
     [Fact]
