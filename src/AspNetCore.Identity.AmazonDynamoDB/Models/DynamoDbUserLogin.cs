@@ -3,7 +3,7 @@ using Amazon.DynamoDBv2.DataModel;
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
 [DynamoDBTable(Constants.DefaultUserLoginsTableName)]
-public class DynamoDbLoginClaim
+public class DynamoDbUserLogin
 {
     [DynamoDBHashKey]
     public string? LoginProvider { get; set; }

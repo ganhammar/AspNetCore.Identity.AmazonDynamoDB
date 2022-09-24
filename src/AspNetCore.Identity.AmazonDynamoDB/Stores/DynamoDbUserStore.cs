@@ -1,5 +1,8 @@
 using System.Security.Claims;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.DataModel;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
@@ -15,14 +18,59 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         IUserLoginStore<TUserEntity>
     where TUserEntity : DynamoDbUser, new()
 {
-    public Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    private IAmazonDynamoDB _client;
+    private IDynamoDBContext _context;
+    private IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
+    private DynamoDbOptions _options => _optionsMonitor.CurrentValue;
+
+    public DynamoDbUserStore(IOptionsMonitor<DynamoDbOptions> optionsMonitor)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(optionsMonitor);
+
+        _optionsMonitor = optionsMonitor;
+
+        ArgumentNullException.ThrowIfNull(_options.Database);
+
+        _client = _options.Database;
+        _context = new DynamoDBContext(_client);
     }
 
-    public Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
+    public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (claims?.Any() != true)
+        {
+            return;
+        }
+
+        var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+
+        foreach (var claim in claims)
+        {
+            batch.AddPutItem(new()
+            {
+                ClaimType = claim.Type,
+                ClaimValue = claim.Value,
+                UserId = user.Id,
+            });
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
+    }
+
+    public async Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(login);
+
+        await _context.SaveAsync(new DynamoDbUserLogin
+        {
+            LoginProvider = login.LoginProvider,
+            ProviderDisplayName = login.ProviderDisplayName,
+            ProviderKey = login.ProviderKey,
+            UserId = user.Id,
+        }, cancellationToken);
     }
 
     public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
@@ -30,9 +78,15 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         throw new NotImplementedException();
     }
 
-    public Task<IdentityResult> CreateAsync(TUserEntity user, CancellationToken cancellationToken)
+    public async Task<IdentityResult> CreateAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await _context.SaveAsync(user, cancellationToken);
+
+        return IdentityResult.Success;
     }
 
     public Task<IdentityResult> DeleteAsync(TUserEntity user, CancellationToken cancellationToken)
