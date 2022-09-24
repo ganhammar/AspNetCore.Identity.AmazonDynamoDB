@@ -33,5 +33,5 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: test/OpenIddict.DynamoDB.Tests/TestResults/coverage.info
+          files: test/AspNetCore.Identity.AmazonDynamoDB.Tests/TestResults/coverage.info
           fail_ci_if_error: false
