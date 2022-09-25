@@ -79,7 +79,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(roleName);
 
-        await _context.SaveAsync(new DynamoDbRoleUser
+        await _context.SaveAsync(new DynamoDbUserRole
         {
             RoleName = roleName,
             UserId = user.Id,
@@ -211,9 +211,29 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.FromResult((DateTimeOffset?)user.LockoutEnd);
     }
 
-    public Task<IList<UserLoginInfo>> GetLoginsAsync(TUserEntity user, CancellationToken cancellationToken)
+    public async Task<IList<UserLoginInfo>> GetLoginsAsync(
+        TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
+        {
+            IndexName = "UserId-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "UserId = :userId",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":userId", user.Id },
+                }
+            },
+        });
+        var logins = await search.GetRemainingAsync(cancellationToken);
+
+        return logins
+            .Select(x => new UserLoginInfo(
+                x.LoginProvider, x.ProviderKey, x.ProviderDisplayName))
+            .ToList();
     }
 
     public Task<string> GetNormalizedEmailAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -232,52 +252,74 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task<string> GetPasswordHashAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.PasswordHash);
     }
 
     public Task<string> GetPhoneNumberAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.PhoneNumber);
     }
 
     public Task<bool> GetPhoneNumberConfirmedAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.PhoneNumberConfirmed);
     }
 
-    public Task<IList<string>> GetRolesAsync(TUserEntity user, CancellationToken cancellationToken)
+    public async Task<IList<string>> GetRolesAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
+        {
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "UserId = :userId",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":userId", user.Id },
+                }
+            },
+        });
+        var roles = await search.GetRemainingAsync(cancellationToken);
+
+        return roles
+            .Where(x => x.RoleName != default)
+            .Select(x => x.RoleName!)
+            .ToList();
     }
 
     public Task<string> GetSecurityStampAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.SecurityStamp);
     }
 
     public Task<bool> GetTwoFactorEnabledAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
-    }
+        ArgumentNullException.ThrowIfNull(user);
 
-    public Task<string> GeTUserEntityIdAsync(TUserEntity user, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<string> GeTUserEntityNameAsync(TUserEntity user, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
+        return Task.FromResult(user.TwoFactorEnabled);
     }
 
     public Task<string> GetUserIdAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.Id);
     }
 
     public Task<string> GetUserNameAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.UserName);
     }
 
     public Task<IList<TUserEntity>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
