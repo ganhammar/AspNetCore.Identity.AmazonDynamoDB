@@ -1380,4 +1380,519 @@ public class DynamoDbUserStoreTests
             Assert.Equal(expectedResult, value);
         }
     }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetEmailAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetEmailAsync(default!, "test@test.se", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetEmail_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                Email = "test@test.se",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var email = "testing@test.se";
+            await userStore.SetEmailAsync(user, email, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(email, user.Email);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetEmailConfirmedAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetEmailConfirmedAsync(default!, true, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetEmailConfirmed_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                EmailConfirmed = true,
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var emailConfirmed = true;
+            await userStore.SetEmailConfirmedAsync(
+                user, emailConfirmed, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(emailConfirmed, user.EmailConfirmed);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetLockoutEnabledAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetLockoutEnabledAsync(default!, true, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetLockoutEnabled_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                LockoutEnabled = true,
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var emailConfirmed = true;
+            await userStore.SetLockoutEnabledAsync(
+                user, emailConfirmed, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(emailConfirmed, user.LockoutEnabled);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetLockoutEndDateAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetLockoutEndDateAsync(default!, DateTimeOffset.Now, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetLockoutEndDate_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                LockoutEnd = default,
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var lockoutEnd = DateTimeOffset.Now;
+            await userStore.SetLockoutEndDateAsync(
+                user, lockoutEnd, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(lockoutEnd.UtcDateTime, user.LockoutEnd);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetNormalizedEmailAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetNormalizedEmailAsync(default!, "TEST@TEST.SE", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetNormalizedEmail_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                NormalizedEmail = "TEST@TEST.SE",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var normalizedEmail = "TESTING@TEST.SE";
+            await userStore.SetNormalizedEmailAsync(
+                user, normalizedEmail, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(normalizedEmail, user.NormalizedEmail);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetNormalizedUserNameAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetNormalizedUserNameAsync(default!, "TEST", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetNormalizedUserName_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                NormalizedUserName = "TEST",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var normalizedUserName = "TESTING";
+            await userStore.SetNormalizedUserNameAsync(
+                user, normalizedUserName, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(normalizedUserName, user.NormalizedUserName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetPasswordHashAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetPasswordHashAsync(default!, "Secret", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetPasswordHash_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                PasswordHash = "Secret",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var passwordHash = "Even-More-Secret";
+            await userStore.SetPasswordHashAsync(
+                user, passwordHash, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(passwordHash, user.PasswordHash);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetPhoneNumberAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetPhoneNumberAsync(default!, "1111111", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetPhoneNumber_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                PhoneNumber = "1111111",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var phoneNumber = "2222222";
+            await userStore.SetPhoneNumberAsync(
+                user, phoneNumber, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(phoneNumber, user.PhoneNumber);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetPhoneNumberConfirmedAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetPhoneNumberConfirmedAsync(default!, true, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetPhoneNumberConfirmed_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                PhoneNumberConfirmed = false,
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var phoneNumberConfirmed = true;
+            await userStore.SetPhoneNumberConfirmedAsync(
+                user, phoneNumberConfirmed, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(phoneNumberConfirmed, user.PhoneNumberConfirmed);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetTwoFactorEnabledAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetTwoFactorEnabledAsync(default!, true, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetTwoFactorEnabled_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                TwoFactorEnabled = false,
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var phoneNumberConfirmed = true;
+            await userStore.SetTwoFactorEnabledAsync(
+                user, phoneNumberConfirmed, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(phoneNumberConfirmed, user.TwoFactorEnabled);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetSecurityStampAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetSecurityStampAsync(default!, "some-string", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetSecurityStamp_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                SecurityStamp = "some-string",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var securityStamp = "some-other-string";
+            await userStore.SetSecurityStampAsync(
+                user, securityStamp, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(securityStamp, user.SecurityStamp);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToSetUserNameAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.SetUserNameAsync(default!, "some-user", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetUserName_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                UserName = "some-user",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var userName = "some-other-user";
+            await userStore.SetUserNameAsync(
+                user, userName, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(userName, user.UserName);
+        }
+    }
 }

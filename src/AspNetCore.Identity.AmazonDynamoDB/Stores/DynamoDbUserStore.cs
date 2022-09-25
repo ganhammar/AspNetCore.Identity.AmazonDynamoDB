@@ -397,67 +397,86 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task SetEmailAsync(TUserEntity user, string email, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.Email = email;
+        return Task.CompletedTask;
     }
 
     public Task SetEmailConfirmedAsync(TUserEntity user, bool confirmed, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.EmailConfirmed = confirmed;
+        return Task.CompletedTask;
     }
 
     public Task SetLockoutEnabledAsync(TUserEntity user, bool enabled, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.LockoutEnabled = enabled;
+        return Task.CompletedTask;
     }
 
     public Task SetLockoutEndDateAsync(TUserEntity user, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.LockoutEnd = lockoutEnd.HasValue ? lockoutEnd.Value.UtcDateTime : default;
+        return Task.CompletedTask;
     }
 
     public Task SetNormalizedEmailAsync(TUserEntity user, string normalizedEmail, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.NormalizedEmail = normalizedEmail;
+        return Task.CompletedTask;
     }
 
     public Task SetNormalizedUserNameAsync(TUserEntity user, string normalizedName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.NormalizedUserName = normalizedName;
+        return Task.CompletedTask;
     }
 
     public Task SetPasswordHashAsync(TUserEntity user, string passwordHash, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.PasswordHash = passwordHash;
+        return Task.CompletedTask;
     }
 
     public Task SetPhoneNumberAsync(TUserEntity user, string phoneNumber, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.PhoneNumber = phoneNumber;
+        return Task.CompletedTask;
     }
 
     public Task SetPhoneNumberConfirmedAsync(TUserEntity user, bool confirmed, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.PhoneNumberConfirmed = confirmed;
+        return Task.CompletedTask;
     }
 
     public Task SetSecurityStampAsync(TUserEntity user, string stamp, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.SecurityStamp = stamp;
+        return Task.CompletedTask;
     }
 
     public Task SetTwoFactorEnabledAsync(TUserEntity user, bool enabled, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task SeTUserEntityNameAsync(TUserEntity user, string userName, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.TwoFactorEnabled = enabled;
+        return Task.CompletedTask;
     }
 
     public Task SetUserNameAsync(TUserEntity user, string userName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.UserName = userName;
+        return Task.CompletedTask;
     }
 
     public Task<IdentityResult> UpdateAsync(TUserEntity user, CancellationToken cancellationToken)
