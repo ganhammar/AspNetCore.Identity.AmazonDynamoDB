@@ -32,10 +32,10 @@ public static class DynamoDbUserSetup
         {
             new GlobalSecondaryIndex
             {
-                IndexName = "Email-index",
+                IndexName = "NormalizedEmail-index",
                 KeySchema = new List<KeySchemaElement>
                 {
-                    new KeySchemaElement("Email", KeyType.HASH),
+                    new KeySchemaElement("NormalizedEmail", KeyType.HASH),
                 },
                 ProvisionedThroughput = options.ProvisionedThroughput,
                 Projection = new Projection
@@ -45,10 +45,10 @@ public static class DynamoDbUserSetup
             },
             new GlobalSecondaryIndex
             {
-                IndexName = "Name-index",
+                IndexName = "NormalizedUserName-index",
                 KeySchema = new List<KeySchemaElement>
                 {
-                    new KeySchemaElement("Name", KeyType.HASH),
+                    new KeySchemaElement("NormalizedUserName", KeyType.HASH),
                 },
                 ProvisionedThroughput = options.ProvisionedThroughput,
                 Projection = new Projection
@@ -200,12 +200,12 @@ public static class DynamoDbUserSetup
                 },
                 new AttributeDefinition
                 {
-                    AttributeName = "Email",
+                    AttributeName = "NormalizedEmail",
                     AttributeType = ScalarAttributeType.S,
                 },
                 new AttributeDefinition
                 {
-                    AttributeName = "Name",
+                    AttributeName = "NormalizedUserName",
                     AttributeType = ScalarAttributeType.S,
                 },
             },

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -96,39 +97,85 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return IdentityResult.Success;
     }
 
-    public Task<IdentityResult> DeleteAsync(TUserEntity user, CancellationToken cancellationToken)
+    // TODO: Cleanup resources connected to the user (roles, logins, claims)
+    public async Task<IdentityResult> DeleteAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        await _context.DeleteAsync(user, cancellationToken);
+
+        return IdentityResult.Success;
     }
 
-    public void Dispose()
+    public async Task<TUserEntity> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(normalizedEmail);
+
+        var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
+        {
+            IndexName = "NormalizedEmail-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "NormalizedEmail = :email",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":email", normalizedEmail },
+                }
+            },
+            Limit = 1
+        });
+        var users = await search.GetRemainingAsync(cancellationToken);
+        return users?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
     }
 
-    public Task<TUserEntity> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+    public async Task<TUserEntity> FindByIdAsync(string userId, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(userId);
+
+        return await _context.LoadAsync<TUserEntity>(userId, cancellationToken);
     }
 
-    public Task<TUserEntity> FindByIdAsync(string userId, CancellationToken cancellationToken)
+    public async Task<TUserEntity> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(providerKey);
+
+        var login = await _context.LoadAsync<DynamoDbUserLogin>(loginProvider, providerKey, cancellationToken);
+
+        if (login == default)
+        {
+            return default!; // Hide compiler warning until Identity handles nullable (v7)
+        }
+
+        return await _context.LoadAsync<TUserEntity>(login.UserId, cancellationToken);
     }
 
-    public Task<TUserEntity> FindByLoginAsync(string loginProvider, string providerKey, CancellationToken cancellationToken)
+    public async Task<TUserEntity> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
-    }
+        ArgumentNullException.ThrowIfNull(normalizedUserName);
 
-    public Task<TUserEntity> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
+        var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
+        {
+            IndexName = "NormalizedUserName-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "NormalizedUserName = :normalizedUserName",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":normalizedUserName", normalizedUserName },
+                }
+            },
+            Limit = 1
+        });
+        var users = await search.GetRemainingAsync(cancellationToken);
+        return users?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
     }
 
     public Task<int> GetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.AccessFailedCount);
     }
 
     public Task<IList<Claim>> GetClaimsAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -138,22 +185,30 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task<string> GetEmailAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.Email);
     }
 
     public Task<bool> GetEmailConfirmedAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.EmailConfirmed);
     }
 
     public Task<bool> GetLockoutEnabledAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.LockoutEnabled);
     }
 
     public Task<DateTimeOffset?> GetLockoutEndDateAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult((DateTimeOffset?)user.LockoutEnd);
     }
 
     public Task<IList<UserLoginInfo>> GetLoginsAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -163,12 +218,16 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task<string> GetNormalizedEmailAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.NormalizedEmail);
     }
 
     public Task<string> GetNormalizedUserNameAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(user.NormalizedUserName);
     }
 
     public Task<string> GetPasswordHashAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -339,5 +398,23 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
     public Task<IdentityResult> UpdateAsync(TUserEntity user, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    ~DynamoDbUserStore()
+    {
+        Dispose(false);
     }
 }
