@@ -1895,4 +1895,110 @@ public class DynamoDbUserStoreTests
             Assert.Equal(userName, user.UserName);
         }
     }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToGetClaimsAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.GetClaimsAsync(default!, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnClaims_When_ListingThem()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                Email = "test@test.se",
+            };
+            await context.SaveAsync(user);
+
+            var claimsCount = 10;
+            for (var index = 0; index < claimsCount; index++)
+            {
+                var login = new DynamoDbUserClaim
+                {
+                    ClaimType = $"Test{index}",
+                    ClaimValue = $"Test{index}",
+                    UserId = user.Id,
+                };
+                await context.SaveAsync(login);
+            }
+
+            // Act
+            var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(claimsCount, claims.Count);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToGetUsersInRoleThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.GetUsersInRoleAsync(default!, CancellationToken.None));
+            Assert.Equal("roleName", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnUsers_When_ListingThemByRoleName()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            var roleName = "test-role";
+            var userCount = 10;
+            for (var index = 0; index < userCount; index++)
+            {
+                var user = new DynamoDbUser
+                {
+                    Email = "test@test.se",
+                };
+                await context.SaveAsync(user);
+                var login = new DynamoDbUserRole
+                {
+                    RoleName = roleName,
+                    UserId = user.Id,
+                };
+                await context.SaveAsync(login);
+            }
+
+            // Act
+            var users = await userStore.GetUsersInRoleAsync(roleName, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(userCount, users.Count);
+        }
+    }
 }

@@ -178,9 +178,28 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.FromResult(user.AccessFailedCount);
     }
 
-    public Task<IList<Claim>> GetClaimsAsync(TUserEntity user, CancellationToken cancellationToken)
+    public async Task<IList<Claim>> GetClaimsAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
+        {
+            IndexName = "UserId-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "UserId = :userId",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":userId", user.Id },
+                },
+            },
+        });
+        var claims = await search.GetRemainingAsync(cancellationToken);
+
+        return claims
+            .Where(x => x.ClaimType != default && x.ClaimValue != default)
+            .Select(x => new Claim(x.ClaimType!, x.ClaimValue!))
+            .ToList();
     }
 
     public Task<string> GetEmailAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -327,9 +346,33 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         throw new NotImplementedException();
     }
 
-    public Task<IList<TUserEntity>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
+    public async Task<IList<TUserEntity>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(roleName);
+
+        var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
+        {
+            IndexName = "RoleName-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "RoleName = :roleName",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":roleName", roleName },
+                },
+            },
+        });
+        var userRoles = await search.GetRemainingAsync(cancellationToken);
+
+        var batch = _context.CreateBatchGet<TUserEntity>();
+        foreach (var userId in userRoles.Select(x => x.UserId).Distinct())
+        {
+            batch.AddKey(userId);
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
+
+        return batch.Results;
     }
 
     public Task<bool> HasPasswordAsync(TUserEntity user, CancellationToken cancellationToken)
