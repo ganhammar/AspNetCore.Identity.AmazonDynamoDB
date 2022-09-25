@@ -1252,4 +1252,132 @@ public class DynamoDbUserStoreTests
             Assert.Equal(user.UserName, value);
         }
     }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToGetHasPasswordOnUserThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.HasPasswordAsync(default!, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnTrue_When_UserHasPassword()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                PasswordHash = "TEST",
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var value = await userStore.HasPasswordAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.True(value);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToIncrementAccessFailedCountOnUserThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.IncrementAccessFailedCountAsync(default!, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_IncrementAccessFailedCount_When_Requested()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                AccessFailedCount = 5,
+            };
+            await context.SaveAsync(user);
+
+            // Act
+            var value = await userStore.IncrementAccessFailedCountAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(6, value);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToCheckIfUserIsInRoleAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.IsInRoleAsync(default!, "test", CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Theory]
+    [InlineData("test", true)]
+    [InlineData("testing", false)]
+    public async Task Should_ReturnExpected_When_CheckingIfUserIsInRole(string roleName, bool expectedResult)
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await context.SaveAsync(user);
+            var userRoles = new DynamoDbUserRole
+            {
+                RoleName = "test",
+                UserId = user.Id,
+            };
+            await context.SaveAsync(userRoles);
+
+            // Act
+            var value = await userStore.IsInRoleAsync(user, roleName, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(expectedResult, value);
+        }
+    }
 }

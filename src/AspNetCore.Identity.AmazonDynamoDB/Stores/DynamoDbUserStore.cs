@@ -120,7 +120,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
                 {
                     { ":email", normalizedEmail },
-                }
+                },
             },
             Limit = 1
         });
@@ -163,7 +163,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
                 {
                     { ":normalizedUserName", normalizedUserName },
-                }
+                },
             },
             Limit = 1
         });
@@ -225,7 +225,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
                 {
                     { ":userId", user.Id },
-                }
+                },
             },
         });
         var logins = await search.GetRemainingAsync(cancellationToken);
@@ -283,7 +283,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
                 {
                     { ":userId", user.Id },
-                }
+                },
             },
         });
         var roles = await search.GetRemainingAsync(cancellationToken);
@@ -334,17 +334,40 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task<bool> HasPasswordAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        return Task.FromResult(!string.IsNullOrEmpty(user.PasswordHash));
     }
 
     public Task<int> IncrementAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        user.AccessFailedCount++;
+
+        return Task.FromResult(user.AccessFailedCount);
     }
 
-    public Task<bool> IsInRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
+    public async Task<bool> IsInRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
+        {
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "UserId = :userId and RoleName = :roleName",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":userId", user.Id },
+                    { ":roleName", roleName },
+                },
+            },
+            Limit = 1,
+        });
+        var roles = await search.GetRemainingAsync(cancellationToken);
+
+        return roles.Any();
     }
 
     public Task RemoveClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
