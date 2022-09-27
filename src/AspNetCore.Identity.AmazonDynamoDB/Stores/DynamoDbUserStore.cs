@@ -413,19 +413,48 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return roles.Any();
     }
 
-    public Task RemoveClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    public async Task RemoveClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(claims);
+
+        var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+
+        foreach (var claim in claims)
+        {
+            batch.AddDeleteItem(new DynamoDbUserClaim
+            {
+                ClaimType = claim.Type,
+                UserId = user.Id,
+            });
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
     }
 
-    public Task RemoveFromRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
+    public async Task RemoveFromRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(roleName);
+
+        await _context.DeleteAsync(new DynamoDbUserRole
+        {
+            RoleName = roleName,
+            UserId = user.Id,
+        });
     }
 
-    public Task RemoveLoginAsync(TUserEntity user, string loginProvider, string providerKey, CancellationToken cancellationToken)
+    public async Task RemoveLoginAsync(TUserEntity user, string loginProvider, string providerKey, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(providerKey);
+
+        await _context.DeleteAsync(new DynamoDbUserLogin
+        {
+            LoginProvider = loginProvider,
+            ProviderKey = providerKey,
+        });
     }
 
     public Task ReplaceClaimAsync(TUserEntity user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
@@ -435,7 +464,9 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task ResetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        user.AccessFailedCount = 0;
+        return Task.FromResult(user.AccessFailedCount);
     }
 
     public Task SetEmailAsync(TUserEntity user, string email, CancellationToken cancellationToken)
