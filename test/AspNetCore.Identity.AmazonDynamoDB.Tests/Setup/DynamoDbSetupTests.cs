@@ -24,6 +24,7 @@ public class DynamoDbSetupTests
             Assert.Contains(Constants.DefaultUsersTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserClaimsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
         }
     }
 
@@ -46,6 +47,7 @@ public class DynamoDbSetupTests
             Assert.Contains(Constants.DefaultUsersTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserClaimsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
         }
     }
 }

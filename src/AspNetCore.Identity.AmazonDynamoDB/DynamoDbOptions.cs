@@ -9,6 +9,7 @@ public class DynamoDbOptions
     public string UserClaimsTableName { get; set; } = Constants.DefaultUserClaimsTableName;
     public string UserLoginsTableName { get; set; } = Constants.DefaultUserLoginsTableName;
     public string UserRolesTableName { get; set; } = Constants.DefaultUserRolesTableName;
+    public string RolesTableName { get; set; } = Constants.DefaultRolesTableName;
     public IAmazonDynamoDB? Database { get; set; }
     public ProvisionedThroughput ProvisionedThroughput { get; set; } = new ProvisionedThroughput
     {

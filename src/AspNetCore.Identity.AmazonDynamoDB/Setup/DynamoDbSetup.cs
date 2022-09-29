@@ -12,6 +12,8 @@ public static class DynamoDbSetup
         {
             DynamoDbUserSetup.EnsureInitializedAsync(
                 options.CurrentValue),
+            DynamoDbRoleSetup.EnsureInitializedAsync(
+                options.CurrentValue),
         };
 
         await Task.WhenAll(promises);
