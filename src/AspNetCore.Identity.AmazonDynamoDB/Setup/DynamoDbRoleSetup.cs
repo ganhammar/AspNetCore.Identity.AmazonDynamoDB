@@ -32,10 +32,10 @@ public static class DynamoDbRoleSetup
         {
             new GlobalSecondaryIndex
             {
-                IndexName = "Name-index",
+                IndexName = "NormalizedName-index",
                 KeySchema = new List<KeySchemaElement>
                 {
-                    new KeySchemaElement("Name", KeyType.HASH),
+                    new KeySchemaElement("NormalizedName", KeyType.HASH),
                 },
                 ProvisionedThroughput = options.ProvisionedThroughput,
                 Projection = new Projection
@@ -91,7 +91,7 @@ public static class DynamoDbRoleSetup
                 },
                 new AttributeDefinition
                 {
-                    AttributeName = "Name",
+                    AttributeName = "NormalizedName",
                     AttributeType = ScalarAttributeType.S,
                 },
             },

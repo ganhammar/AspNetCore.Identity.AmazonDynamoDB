@@ -175,7 +175,126 @@ public class DynamoDbRoleStoreTests
                 role, new(claimType, claimValue), CancellationToken.None);
 
             // Assert
-            Assert.True(role.Claims.Any(x => x.Key == claimType && x.Value == claimValue));
+            Assert.Contains(role.Claims, x => x.Key == claimType && x.Value == claimValue);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToFindRoleByIdThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await roleStore.FindByIdAsync(default!, CancellationToken.None));
+            Assert.Equal("roleId", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnDefault_When_FindingByIdAndRoleDoesntExist()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act
+            var role = await roleStore.FindByIdAsync(Guid.NewGuid().ToString(), CancellationToken.None);
+
+            // Assert
+            Assert.Null(role);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnRole_When_FindingById()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var role = new DynamoDbRole
+            {
+                Name = "test@test.se",
+            };
+            await context.SaveAsync(role);
+
+            // Act
+            var foundRole = await roleStore.FindByIdAsync(role.Id, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(role.Name, foundRole.Name);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToFindByNameThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await roleStore.FindByNameAsync(default!, CancellationToken.None));
+            Assert.Equal("normalizedRoleName", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnDefault_When_FindingByNameAndRoleDoesntExist()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act
+            var role = await roleStore.FindByNameAsync("doesnt@exi.st", CancellationToken.None);
+
+            // Assert
+            Assert.Null(role);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnRole_When_FindingByName()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var role = new DynamoDbRole
+            {
+                Name = "test",
+                NormalizedName = "TEST",
+            };
+            await context.SaveAsync(role);
+
+            // Act
+            var foundRole = await roleStore.FindByNameAsync(role.NormalizedName, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(role.Id, foundRole.Id);
         }
     }
 }

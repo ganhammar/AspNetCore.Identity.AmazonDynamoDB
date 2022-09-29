@@ -361,7 +361,7 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
-    public async Task Should_ThrowException_When_TryingToFindByIdThatIsNull()
+    public async Task Should_ThrowException_When_TryingToFindUserByIdThatIsNull()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
         {
@@ -2376,8 +2376,8 @@ public class DynamoDbUserStoreTests
 
             // Assert
             var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
-            Assert.False(claims.Where(x => x.Type == currentClaim.Type && x.Value == currentClaim.Value).Any());
-            Assert.True(claims.Where(x => x.Type == newClaim.Type && x.Value == newClaim.Value).Any());
+            Assert.DoesNotContain(claims, x => x.Type == currentClaim.Type && x.Value == currentClaim.Value);
+            Assert.Contains(claims, x => x.Type == newClaim.Type && x.Value == newClaim.Value);
         }
     }
 
@@ -2413,7 +2413,7 @@ public class DynamoDbUserStoreTests
 
             // Assert
             Assert.False(result.Succeeded);
-            Assert.True(result.Errors.Any(x => x.Code == "ConcurrencyFailure"));
+            Assert.Contains(result.Errors, x => x.Code == "ConcurrencyFailure");
         }
     }
 
@@ -2435,7 +2435,7 @@ public class DynamoDbUserStoreTests
 
             // Assert
             Assert.False(result.Succeeded);
-            Assert.True(result.Errors.Any(x => x.Code == "ConcurrencyFailure"));
+            Assert.Contains(result.Errors, x => x.Code == "ConcurrencyFailure");
         }
     }
 

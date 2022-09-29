@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -55,14 +56,32 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
         return IdentityResult.Success;
     }
 
-    public Task<TRoleEntity> FindByIdAsync(string roleId, CancellationToken cancellationToken)
+    public async Task<TRoleEntity> FindByIdAsync(string roleId, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(roleId);
+
+        return await _context.LoadAsync<TRoleEntity>(roleId, cancellationToken);
     }
 
-    public Task<TRoleEntity> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+    public async Task<TRoleEntity> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(normalizedRoleName);
+
+        var search = _context.FromQueryAsync<TRoleEntity>(new QueryOperationConfig
+        {
+            IndexName = "NormalizedName-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "NormalizedName = :normalizedRoleName",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":normalizedRoleName", normalizedRoleName },
+                },
+            },
+            Limit = 1
+        });
+        var roles = await search.GetRemainingAsync(cancellationToken);
+        return roles?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
     }
 
     public Task<IList<Claim>> GetClaimsAsync(TRoleEntity role, CancellationToken cancellationToken = default)
