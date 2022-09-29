@@ -341,9 +341,34 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.FromResult(user.UserName);
     }
 
-    public Task<IList<TUserEntity>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
+    public async Task<IList<TUserEntity>> GetUsersForClaimAsync(Claim claim, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(claim);
+
+        var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
+        {
+            IndexName = "ClaimType-ClaimValue-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "ClaimType = :claimType and ClaimValue = :claimValue",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":claimType", claim.Type },
+                    { ":claimValue", claim.Value },
+                },
+            },
+        });
+        var userClaims = await search.GetRemainingAsync(cancellationToken);
+
+        var batch = _context.CreateBatchGet<TUserEntity>();
+        foreach (var userId in userClaims.Select(x => x.UserId).Distinct())
+        {
+            batch.AddKey(userId);
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
+
+        return batch.Results;
     }
 
     public async Task<IList<TUserEntity>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
@@ -457,9 +482,30 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         });
     }
 
-    public Task ReplaceClaimAsync(TUserEntity user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
+    public async Task ReplaceClaimAsync(TUserEntity user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentNullException.ThrowIfNull(newClaim);
+
+        var claims = await GetClaimsAsync(user, cancellationToken);
+
+        var foundClaim = claims.FirstOrDefault(x => x.Type == claim.Type && x.Value == claim.Value);
+
+        if (foundClaim != null) {
+            await _context.DeleteAsync(new DynamoDbUserClaim
+            {
+                ClaimType = foundClaim.Type,
+                UserId = user.Id,
+            });
+
+            await _context.SaveAsync(new DynamoDbUserClaim
+            {
+                ClaimType = newClaim.Type,
+                ClaimValue = newClaim.Value,
+                UserId = user.Id,
+            });
+        }
     }
 
     public Task ResetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -553,9 +599,26 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.CompletedTask;
     }
 
-    public Task<IdentityResult> UpdateAsync(TUserEntity user, CancellationToken cancellationToken)
+    public async Task<IdentityResult> UpdateAsync(TUserEntity user, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(user);
+
+        // Ensure no one else is updating
+        var databaseApplication = await _context.LoadAsync<TUserEntity>(user.Id, cancellationToken);
+        if (databaseApplication == default || databaseApplication.ConcurrencyStamp != user.ConcurrencyStamp)
+        {
+            return IdentityResult.Failed(new IdentityError
+            {
+                Code = "ConcurrencyFailure",
+                Description = "ConcurrencyStamp mismatch",
+            });
+        }
+
+        user.ConcurrencyStamp = Guid.NewGuid().ToString();
+
+        await _context.SaveAsync(user, cancellationToken);
+
+        return IdentityResult.Success;
     }
 
     protected virtual void Dispose(bool disposing)

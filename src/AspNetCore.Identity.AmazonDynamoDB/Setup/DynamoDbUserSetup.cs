@@ -72,6 +72,20 @@ public static class DynamoDbUserSetup
                     ProjectionType = ProjectionType.ALL,
                 },
             },
+            new GlobalSecondaryIndex
+            {
+                IndexName = "ClaimType-ClaimValue-index",
+                KeySchema = new List<KeySchemaElement>
+                {
+                    new KeySchemaElement("ClaimType", KeyType.HASH),
+                    new KeySchemaElement("ClaimValue", KeyType.RANGE),
+                },
+                ProvisionedThroughput = options.ProvisionedThroughput,
+                Projection = new Projection
+                {
+                    ProjectionType = ProjectionType.ALL,
+                },
+            },
         };
         var userLoginGlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
         {
@@ -256,6 +270,11 @@ public static class DynamoDbUserSetup
                 new AttributeDefinition
                 {
                     AttributeName = "UserId",
+                    AttributeType = ScalarAttributeType.S,
+                },
+                new AttributeDefinition
+                {
+                    AttributeName = "ClaimValue",
                     AttributeType = ScalarAttributeType.S,
                 },
             },

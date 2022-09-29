@@ -2270,4 +2270,196 @@ public class DynamoDbUserStoreTests
             Assert.Equal(0, response.Table.ItemCount);
         }
     }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToGetUsersForClaimThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.GetUsersForClaimAsync(default!, CancellationToken.None));
+            Assert.Equal("claim", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnUsers_When_ListingThemByClaim()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            var claimType = "test-claim-type";
+            var claimValue = "test-claim-value";
+            var userCount = 10;
+            for (var index = 0; index < userCount; index++)
+            {
+                var user = new DynamoDbUser();
+                await context.SaveAsync(user);
+                var login = new DynamoDbUserClaim
+                {
+                    ClaimType = claimType,
+                    ClaimValue = claimValue,
+                    UserId = user.Id,
+                };
+                await context.SaveAsync(login);
+            }
+
+            // Act
+            var users = await userStore.GetUsersForClaimAsync(new Claim(claimType, claimValue), CancellationToken.None);
+
+            // Assert
+            Assert.Equal(userCount, users.Count);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, true, true, "user")]
+    [InlineData(true, false, true, "claim")]
+    [InlineData(true, true, false, "newClaim")]
+    public async Task Should_ThrowException_When_ParameterIsNull(
+        bool userHasValue, bool currentClaimHasValue, bool newClaimHasValue, string expectedParamName)
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.ReplaceClaimAsync(
+                    userHasValue ? new() : default!,
+                    currentClaimHasValue ? new("t", "t") : default!,
+                    newClaimHasValue ? new("t", "t") : default!,
+                    CancellationToken.None));
+            Assert.Equal(expectedParamName, exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReplaceClaim_When_RequestIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            var user = new DynamoDbUser();
+            await context.SaveAsync(user);
+
+            var currentClaim = new Claim("current", "current");
+            var newClaim = new Claim("claim", "claim");
+            await context.SaveAsync(new DynamoDbUserClaim
+            {
+                UserId = user.Id,
+                ClaimType = currentClaim.Type,
+                ClaimValue = currentClaim.Value,
+            });
+
+            // Act
+            await userStore.ReplaceClaimAsync(user, currentClaim, newClaim, CancellationToken.None);
+
+            // Assert
+            var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
+            Assert.False(claims.Where(x => x.Type == currentClaim.Type && x.Value == currentClaim.Value).Any());
+            Assert.True(claims.Where(x => x.Type == newClaim.Type && x.Value == newClaim.Value).Any());
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToUpdateUserThatIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.UpdateAsync(default!, CancellationToken.None));
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_TryingToUpdateUserThatDoesntExist()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act
+            var result = await userStore.UpdateAsync(new(), CancellationToken.None);
+
+            // Assert
+            Assert.False(result.Succeeded);
+            Assert.True(result.Errors.Any(x => x.Code == "ConcurrencyFailure"));
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_ConcurrencyStampHasChanged()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            user.ConcurrencyStamp = Guid.NewGuid().ToString();
+            var result = await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.False(result.Succeeded);
+            Assert.True(result.Errors.Any(x => x.Code == "ConcurrencyFailure"));
+        }
+    }
+
+    [Fact]
+    public async Task Should_UpdateUser_When_UserIsValid()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            user.UserName = "testing-to-update";
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var databaseUser = await context.LoadAsync<DynamoDbUser>(user.Id);
+            Assert.NotNull(databaseUser);
+            Assert.Equal(databaseUser.UserName, user.UserName);
+        }
+    }
 }
