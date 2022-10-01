@@ -33,7 +33,14 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
         ArgumentNullException.ThrowIfNull(role);
         ArgumentNullException.ThrowIfNull(claim);
 
-        role.Claims.Add(claim.Type, claim.Value);
+        if (role.Claims.ContainsKey(claim.Type))
+        {
+            role.Claims[claim.Type].Add(claim.Value);
+        }
+        else
+        {
+            role.Claims.Add(claim.Type, new() { claim.Value });
+        }
 
         return Task.CompletedTask;
     }
@@ -86,42 +93,92 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     public Task<IList<Claim>> GetClaimsAsync(TRoleEntity role, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        
+        return Task.FromResult(role.Claims
+            .SelectMany(x => x.Value.Select(y => new Claim(x.Key, y)))
+            .ToList() as IList<Claim>);
     }
 
     public Task<string> GetNormalizedRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        
+        return Task.FromResult(role.NormalizedName);
     }
 
     public Task<string> GetRoleIdAsync(TRoleEntity role, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        
+        return Task.FromResult(role.Id);
     }
 
     public Task<string> GetRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        
+        return Task.FromResult(role.Name);
     }
 
     public Task RemoveClaimAsync(TRoleEntity role, Claim claim, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(claim);
+
+        if (role.Claims.ContainsKey(claim.Type))
+        {
+            role.Claims[claim.Type].Remove(claim.Value);
+
+            if (role.Claims[claim.Type].Count == 0)
+            {
+                role.Claims.Remove(claim.Type);
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     public Task SetNormalizedRoleNameAsync(TRoleEntity role, string normalizedName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(normalizedName);
+        
+        role.NormalizedName = normalizedName;
+
+        return Task.CompletedTask;
     }
 
     public Task SetRoleNameAsync(TRoleEntity role, string roleName, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(roleName);
+        
+        role.Name = roleName;
+
+        return Task.CompletedTask;
     }
 
-    public Task<IdentityResult> UpdateAsync(TRoleEntity role, CancellationToken cancellationToken)
+    public async Task<IdentityResult> UpdateAsync(TRoleEntity role, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(role);
+
+        // Ensure no one else is updating
+        var databaseApplication = await _context.LoadAsync<TRoleEntity>(role.Id, cancellationToken);
+        if (databaseApplication == default || databaseApplication.ConcurrencyStamp != role.ConcurrencyStamp)
+        {
+            return IdentityResult.Failed(new IdentityError
+            {
+                Code = "ConcurrencyFailure",
+                Description = "ConcurrencyStamp mismatch",
+            });
+        }
+
+        role.ConcurrencyStamp = Guid.NewGuid().ToString();
+
+        await _context.SaveAsync(role, cancellationToken);
+
+        return IdentityResult.Success;
     }
 
     protected virtual void Dispose(bool disposing)

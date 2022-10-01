@@ -6,6 +6,6 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 [DynamoDBTable(Constants.DefaultRolesTableName)]
 public class DynamoDbRole : IdentityRole
 {
-    public Dictionary<string, string> Claims { get; set; }
-        = new Dictionary<string, string>();
+    public Dictionary<string, List<string>> Claims { get; set; }
+        = new Dictionary<string, List<string>>();
 }
