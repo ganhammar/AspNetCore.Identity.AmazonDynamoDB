@@ -36,54 +36,57 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         _context = new DynamoDBContext(_client);
     }
 
-    public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    public Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
 
         if (claims?.Any() != true)
         {
-            return;
+            return Task.CompletedTask;
         }
-
-        var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
 
         foreach (var claim in claims)
         {
-            batch.AddPutItem(new()
+            if (user.Claims.ContainsKey(claim.Type))
             {
-                ClaimType = claim.Type,
-                ClaimValue = claim.Value,
-                UserId = user.Id,
-            });
+                user.Claims[claim.Type].Add(claim.Value);
+            }
+            else
+            {
+                user.Claims.Add(claim.Type, new() { claim.Value });
+            }
         }
 
-        await batch.ExecuteAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
-    public async Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
+    public Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(login);
 
-        await _context.SaveAsync(new DynamoDbUserLogin
+        user.Logins.Add(new DynamoDbUserLogin
         {
             LoginProvider = login.LoginProvider,
-            ProviderDisplayName = login.ProviderDisplayName,
             ProviderKey = login.ProviderKey,
+            ProviderDisplayName = login.ProviderDisplayName,
             UserId = user.Id,
-        }, cancellationToken);
+        });
+
+        return Task.CompletedTask;
     }
 
-    public async Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
+    public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(roleName);
 
-        await _context.SaveAsync(new DynamoDbUserRole
+        if (user.Roles.Contains(roleName) == false)
         {
-            RoleName = roleName,
-            UserId = user.Id,
-        }, cancellationToken);
+            user.Roles.Add(roleName);
+        }
+
+        return Task.CompletedTask;
     }
 
     public async Task<IdentityResult> CreateAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -93,6 +96,9 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         cancellationToken.ThrowIfCancellationRequested();
 
         await _context.SaveAsync(user, cancellationToken);
+        await SaveClaims(user, cancellationToken);
+        await SaveLogins(user, cancellationToken);
+        await SaveRoles(user, cancellationToken);
 
         return IdentityResult.Success;
     }
@@ -178,10 +184,8 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.FromResult(user.AccessFailedCount);
     }
 
-    public async Task<IList<Claim>> GetClaimsAsync(TUserEntity user, CancellationToken cancellationToken)
+    private async Task<List<DynamoDbUserClaim>> GetRawClaims(TUserEntity user, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(user);
-
         var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
         {
             IndexName = "UserId-index",
@@ -194,11 +198,25 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 },
             },
         });
-        var claims = await search.GetRemainingAsync(cancellationToken);
+        return await search.GetRemainingAsync(cancellationToken);
+    }
 
-        return claims
-            .Where(x => x.ClaimType != default && x.ClaimValue != default)
-            .Select(x => new Claim(x.ClaimType!, x.ClaimValue!))
+    private Dictionary<string, List<string>> ToDictionary(List<DynamoDbUserClaim> claims) => claims
+        .GroupBy(x => x.ClaimType)
+        .ToDictionary(x => x.Key!, x => x.Select(y => y.ClaimValue!).ToList());
+
+    public async Task<IList<Claim>> GetClaimsAsync(TUserEntity user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        
+        if (user.Claims.Any() == false)
+        {
+            var claims = await GetRawClaims(user, cancellationToken);
+            user.Claims = ToDictionary(claims);
+        }
+
+        return FlattenClaims(user)
+            .Select(x => new Claim(x.Key, x.Value))
             .ToList();
     }
 
@@ -230,11 +248,8 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.FromResult((DateTimeOffset?)user.LockoutEnd);
     }
 
-    public async Task<IList<UserLoginInfo>> GetLoginsAsync(
-        TUserEntity user, CancellationToken cancellationToken)
+    public async Task<List<DynamoDbUserLogin>> GetRawLogins(TUserEntity user, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(user);
-
         var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
         {
             IndexName = "UserId-index",
@@ -247,9 +262,20 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 },
             },
         });
-        var logins = await search.GetRemainingAsync(cancellationToken);
+        return await search.GetRemainingAsync(cancellationToken);
+    }
 
-        return logins
+    public async Task<IList<UserLoginInfo>> GetLoginsAsync(
+        TUserEntity user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (user.Logins.Any() == false)
+        {
+            user.Logins = await GetRawLogins(user, cancellationToken);
+        }
+
+        return user.Logins
             .Select(x => new UserLoginInfo(
                 x.LoginProvider, x.ProviderKey, x.ProviderDisplayName))
             .ToList();
@@ -290,10 +316,8 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.FromResult(user.PhoneNumberConfirmed);
     }
 
-    public async Task<IList<string>> GetRolesAsync(TUserEntity user, CancellationToken cancellationToken)
+    public async Task<List<DynamoDbUserRole>> GetRawRoles(TUserEntity user, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(user);
-
         var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
         {
             KeyExpression = new Expression
@@ -305,12 +329,20 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 },
             },
         });
-        var roles = await search.GetRemainingAsync(cancellationToken);
+        return await search.GetRemainingAsync(cancellationToken);
+    }
 
-        return roles
-            .Where(x => x.RoleName != default)
-            .Select(x => x.RoleName!)
-            .ToList();
+    public async Task<IList<string>> GetRolesAsync(TUserEntity user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        if (user.Roles.Any() == false)
+        {
+            var roles = await GetRawRoles(user, cancellationToken);
+            user.Roles = roles.Select(x => x.RoleName!).ToList();
+        }
+
+        return user.Roles;
     }
 
     public Task<string> GetSecurityStampAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -443,18 +475,20 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(claims);
 
-        var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+        user.Claims = user.Claims ?? ToDictionary(await GetRawClaims(user, cancellationToken));
 
         foreach (var claim in claims)
         {
-            batch.AddDeleteItem(new DynamoDbUserClaim
+            if (user.Claims.ContainsKey(claim.Type))
             {
-                ClaimType = claim.Type,
-                UserId = user.Id,
-            });
-        }
+                user.Claims[claim.Type].Remove(claim.Value);
 
-        await batch.ExecuteAsync(cancellationToken);
+                if (user.Claims[claim.Type].Count == 0)
+                {
+                    user.Claims.Remove(claim.Type);
+                }
+            }
+        }
     }
 
     public async Task RemoveFromRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
@@ -462,11 +496,8 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(roleName);
 
-        await _context.DeleteAsync(new DynamoDbUserRole
-        {
-            RoleName = roleName,
-            UserId = user.Id,
-        });
+        var roles = user.Roles ?? await GetRolesAsync(user, cancellationToken);
+        user.Roles = roles.Except(new List<string> { roleName }).ToList();
     }
 
     public async Task RemoveLoginAsync(TUserEntity user, string loginProvider, string providerKey, CancellationToken cancellationToken)
@@ -475,11 +506,11 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         ArgumentNullException.ThrowIfNull(loginProvider);
         ArgumentNullException.ThrowIfNull(providerKey);
 
-        await _context.DeleteAsync(new DynamoDbUserLogin
-        {
-            LoginProvider = loginProvider,
-            ProviderKey = providerKey,
-        });
+        var logins = user.Logins ?? await GetRawLogins(user, cancellationToken);
+        user.Logins = logins.Except(logins
+            .Where(x => x.LoginProvider == loginProvider)
+            .Where(x => x.ProviderKey == providerKey))
+            .ToList();
     }
 
     public async Task ReplaceClaimAsync(TUserEntity user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
@@ -488,24 +519,8 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         ArgumentNullException.ThrowIfNull(claim);
         ArgumentNullException.ThrowIfNull(newClaim);
 
-        var claims = await GetClaimsAsync(user, cancellationToken);
-
-        var foundClaim = claims.FirstOrDefault(x => x.Type == claim.Type && x.Value == claim.Value);
-
-        if (foundClaim != null) {
-            await _context.DeleteAsync(new DynamoDbUserClaim
-            {
-                ClaimType = foundClaim.Type,
-                UserId = user.Id,
-            });
-
-            await _context.SaveAsync(new DynamoDbUserClaim
-            {
-                ClaimType = newClaim.Type,
-                ClaimValue = newClaim.Value,
-                UserId = user.Id,
-            });
-        }
+        await RemoveClaimsAsync(user, new List<Claim> { claim }, cancellationToken);
+        await AddClaimsAsync(user, new List<Claim> { newClaim }, cancellationToken);
     }
 
     public Task ResetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -617,8 +632,152 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         user.ConcurrencyStamp = Guid.NewGuid().ToString();
 
         await _context.SaveAsync(user, cancellationToken);
+        await SaveClaims(user, cancellationToken);
+        await SaveLogins(user, cancellationToken);
+        await SaveRoles(user, cancellationToken);
 
         return IdentityResult.Success;
+    }
+
+    private List<KeyValuePair<string, string>> FlattenClaims(TUserEntity user) => user.Claims
+        .SelectMany(x => x.Value.Select(y => new KeyValuePair<string, string>(x.Key, y)))
+        .ToList();
+
+    public async Task RemoveDeletedClaims(TUserEntity user, CancellationToken cancellationToken)
+    {
+        var persistedClaims = await GetRawClaims(user, cancellationToken);
+        var newClaims = FlattenClaims(user).Select(x => new DynamoDbUserClaim
+        {
+            ClaimType = x.Key,
+            ClaimValue = x.Value,
+            UserId = user.Id,
+        });
+
+        var toBeDeleted = persistedClaims.Except(newClaims);
+
+        if (toBeDeleted.Any())
+        {
+            var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+            
+            foreach (var claim in toBeDeleted)
+            {
+                batch.AddDeleteItem(claim);
+            }
+
+            await batch.ExecuteAsync();
+        }
+    }
+
+    public async Task SaveClaims(TUserEntity user, CancellationToken cancellationToken)
+    {
+        await RemoveDeletedClaims(user, cancellationToken);
+
+        if (user.Claims.Any() == false)
+        {
+            return;
+        }
+
+        var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+        var flattenClaims = FlattenClaims(user);
+
+        foreach (var claim in flattenClaims)
+        {
+            batch.AddPutItem(new()
+            {
+                ClaimType = claim.Key,
+                ClaimValue = claim.Value,
+                UserId = user.Id,
+            });
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
+    }
+
+    public async Task RemoveDeletedLogins(TUserEntity user, CancellationToken cancellationToken)
+    {
+        var persistedLogins = await GetRawLogins(user, cancellationToken);
+        var newLogins = user.Logins;
+
+        var toBeDeleted = persistedLogins.Except(newLogins);
+
+        if (toBeDeleted.Any())
+        {
+            var batch = _context.CreateBatchWrite<DynamoDbUserLogin>();
+
+            foreach (var login in toBeDeleted)
+            {
+                batch.AddDeleteItem(login);
+            }
+
+            await batch.ExecuteAsync();
+        }
+    }
+
+    public async Task SaveLogins(TUserEntity user, CancellationToken cancellationToken)
+    {
+        await RemoveDeletedLogins(user, cancellationToken);
+
+        if (user.Logins.Any() == false)
+        {
+            return;
+        }
+
+        var batch = _context.CreateBatchWrite<DynamoDbUserLogin>();
+
+        foreach (var login in user.Logins)
+        {
+            login.UserId = user.Id;
+            batch.AddPutItem(login);
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
+    }
+
+    public async Task RemoveDeletedRoles(TUserEntity user, CancellationToken cancellationToken)
+    {
+        var persistedRoles = await GetRawRoles(user, cancellationToken);
+        var newRoles = user.Roles.Select(x => new DynamoDbUserRole
+        {
+            RoleName = x,
+            UserId = user.Id,
+        });
+
+        var toBeDeleted = persistedRoles.Except(newRoles);
+
+        if (toBeDeleted.Any())
+        {
+            var batch = _context.CreateBatchWrite<DynamoDbUserRole>();
+
+            foreach (var role in toBeDeleted)
+            {
+                batch.AddDeleteItem(role);
+            }
+
+            await batch.ExecuteAsync();
+        }
+    }
+
+    public async Task SaveRoles(TUserEntity user, CancellationToken cancellationToken)
+    {
+        await RemoveDeletedRoles(user, cancellationToken);
+
+        if (user.Roles.Any() == false)
+        {
+            return;
+        }
+
+        var batch = _context.CreateBatchWrite<DynamoDbUserRole>();
+
+        foreach (var role in user.Roles)
+        {
+            batch.AddPutItem(new()
+            {
+                RoleName = role,
+                UserId = user.Id,
+            });
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
     }
 
     protected virtual void Dispose(bool disposing)

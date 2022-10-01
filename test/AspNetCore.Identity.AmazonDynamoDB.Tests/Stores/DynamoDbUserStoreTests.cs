@@ -102,16 +102,13 @@ public class DynamoDbUserStoreTests
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
             await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
 
             // Act
-            await userStore.AddClaimsAsync(new(), new List<Claim>(), CancellationToken.None);
+            await userStore.AddClaimsAsync(user, new List<Claim>(), CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserClaimsTableName,
-            });
-            Assert.Equal(0, response.Table.ItemCount);
+            Assert.Empty(user.Claims);
         }
     }
 
@@ -124,20 +121,17 @@ public class DynamoDbUserStoreTests
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
             await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
 
             // Act
-            await userStore.AddClaimsAsync(new(), new List<Claim>
+            await userStore.AddClaimsAsync(user, new List<Claim>
             {
                 new Claim(ClaimTypes.Country, "se"),
                 new Claim(ClaimTypes.Email, "test@test.se"),
             }, CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserClaimsTableName,
-            });
-            Assert.Equal(2, response.Table.ItemCount);
+            Assert.Equal(2, user.Claims.Count);
         }
     }
 
@@ -184,17 +178,14 @@ public class DynamoDbUserStoreTests
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
             await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
 
             // Act
             await userStore.AddLoginAsync(
-                new(), new("test", "test", "test"), CancellationToken.None);
+                user, new("test", "test", "test"), CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserLoginsTableName,
-            });
-            Assert.Equal(1, response.Table.ItemCount);
+            Assert.Single(user.Logins);
         }
     }
 
@@ -241,17 +232,14 @@ public class DynamoDbUserStoreTests
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
             await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
 
             // Act
             await userStore.AddToRoleAsync(
-                new(), "test", CancellationToken.None);
+                user, "test", CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserRolesTableName,
-            });
-            Assert.Equal(1, response.Table.ItemCount);
+            Assert.Single(user.Roles);
         }
     }
 
@@ -2087,10 +2075,7 @@ public class DynamoDbUserStoreTests
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
             await DynamoDbSetup.EnsureInitializedAsync(options);
-            var user = new DynamoDbUser
-            {
-                AccessFailedCount = 5,
-            };
+            var user = new DynamoDbUser();
             await context.SaveAsync(user);
 
             var claims = new List<Claim>();
@@ -2112,11 +2097,7 @@ public class DynamoDbUserStoreTests
             await userStore.RemoveClaimsAsync(user, claims, CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserClaimsTableName,
-            });
-            Assert.Equal(0, response.Table.ItemCount);
+            Assert.Empty(user.Claims);
         }
     }
 
@@ -2178,11 +2159,7 @@ public class DynamoDbUserStoreTests
             await userStore.RemoveFromRoleAsync(user, roleName, CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserRolesTableName,
-            });
-            Assert.Equal(0, response.Table.ItemCount);
+            Assert.Empty(user.Roles);
         }
     }
 
@@ -2263,11 +2240,7 @@ public class DynamoDbUserStoreTests
             await userStore.RemoveLoginAsync(user, loginProvider, providerKey, CancellationToken.None);
 
             // Assert
-            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
-            {
-                TableName = Constants.DefaultUserLoginsTableName,
-            });
-            Assert.Equal(0, response.Table.ItemCount);
+            Assert.Empty(user.Logins);
         }
     }
 
@@ -2460,6 +2433,176 @@ public class DynamoDbUserStoreTests
             var databaseUser = await context.LoadAsync<DynamoDbUser>(user.Id);
             Assert.NotNull(databaseUser);
             Assert.Equal(databaseUser.UserName, user.UserName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_RemoveOldClaims_When_Updating()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Claims.Add("test", new() { "test" });
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.RemoveClaimsAsync(
+                user, new List<Claim> { new("test", "test") }, CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserClaimsTableName,
+            });
+            Assert.Equal(0, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_NotRemoveClaims_When_Updating()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Claims.Add("test", new() { "test" });
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserClaimsTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_RemoveOldRoles_When_Updating()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Roles.Add("test");
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.RemoveFromRoleAsync(
+                user, "test", CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserRolesTableName,
+            });
+            Assert.Equal(0, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_NotRemoveRoles_When_Updating()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Roles.Add("test");
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserRolesTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_RemoveOldLogins_When_Updating()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Logins.Add(new()
+            {
+                LoginProvider = "test",
+                ProviderKey = "test",
+            });
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.RemoveLoginAsync(
+                user, "test", "test", CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserLoginsTableName,
+            });
+            Assert.Equal(0, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_NotRemoveLogins_When_Updating()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Logins.Add(new()
+            {
+                LoginProvider = "test",
+                ProviderKey = "test",
+            });
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserLoginsTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
         }
     }
 }
