@@ -40,7 +40,7 @@ DynamoDbSetup.EnsureInitialized(serviceProvider);
 Or asynchronously:
 
 ```c#
-await DynamoDbSetup.EnsureInitializedAsync(serviceProvider);
+await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(serviceProvider);
 ```
 
 ## Tests

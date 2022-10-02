@@ -4,7 +4,7 @@ using Xunit;
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
 [Collection("Sequential")]
-public class DynamoDbSetupTests
+public class AspNetCoreIdentityDynamoDbSetupTests
 {
     [Fact]
     public async Task Should_SetupTables_When_CalledSynchronously()
@@ -18,7 +18,7 @@ public class DynamoDbSetupTests
             });
 
             // Act
-            DynamoDbSetup.EnsureInitialized(options);
+            AspNetCoreIdentityDynamoDbSetup.EnsureInitialized(options);
 
             // Assert
             var tableNames = await database.Client.ListTablesAsync();
@@ -40,7 +40,7 @@ public class DynamoDbSetupTests
             CreateBuilder(services).UseDatabase(database.Client);
 
             // Act
-            DynamoDbSetup.EnsureInitialized(services.BuildServiceProvider());
+            AspNetCoreIdentityDynamoDbSetup.EnsureInitialized(services.BuildServiceProvider());
 
             // Assert
             var tableNames = await database.Client.ListTablesAsync();
@@ -64,7 +64,7 @@ public class DynamoDbSetupTests
             });
 
             // Act
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Assert
             var tableNames = await database.Client.ListTablesAsync();
@@ -86,7 +86,7 @@ public class DynamoDbSetupTests
             CreateBuilder(services).UseDatabase(database.Client);
 
             // Act
-            await DynamoDbSetup.EnsureInitializedAsync(services.BuildServiceProvider());
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(services.BuildServiceProvider());
 
             // Assert
             var tableNames = await database.Client.ListTablesAsync();
@@ -120,7 +120,7 @@ public class DynamoDbSetupTests
             });
 
             // Act
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Assert
             var tableNames = await database.Client.ListTablesAsync();

@@ -41,7 +41,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -59,7 +59,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Name = Guid.NewGuid().ToString(),
@@ -83,7 +83,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -101,7 +101,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Name = "test",
@@ -128,7 +128,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -145,7 +145,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -163,7 +163,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             await context.SaveAsync(role);
 
@@ -188,7 +188,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var claimType = "test";
             var role = new DynamoDbRole();
             role.Claims.Add(claimType, new() { "testicles" });
@@ -213,7 +213,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -230,7 +230,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var role = await roleStore.FindByIdAsync(Guid.NewGuid().ToString(), CancellationToken.None);
@@ -249,7 +249,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Name = "test@test.se",
@@ -272,7 +272,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -289,7 +289,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var role = await roleStore.FindByNameAsync("doesnt@exi.st", CancellationToken.None);
@@ -308,7 +308,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Name = "test",
@@ -332,7 +332,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -350,7 +350,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             role.Claims.Add("test", new() { "test" });
             role.Claims.Add("test2", new() { "test2" });
@@ -373,7 +373,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -391,7 +391,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 NormalizedName = "TEST",
@@ -414,7 +414,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -432,7 +432,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Id = Guid.NewGuid().ToString(),
@@ -455,7 +455,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -473,7 +473,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Name = "test",
@@ -496,7 +496,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -514,7 +514,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             role.Claims.Add("test", new() { "test" });
             await context.SaveAsync(role);
@@ -537,7 +537,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             role.Claims.Add("test", new() { "test" });
             await context.SaveAsync(role);
@@ -560,7 +560,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             role.Claims.Add("test", new() { "test", "testicles" });
             await context.SaveAsync(role);
@@ -587,7 +587,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -608,7 +608,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 NormalizedName = "TEST",
@@ -634,7 +634,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -655,7 +655,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole
             {
                 Name = "test",
@@ -678,7 +678,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -695,7 +695,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var result = await roleStore.UpdateAsync(new(), CancellationToken.None);
@@ -714,7 +714,7 @@ public class DynamoDbRoleStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             await roleStore.CreateAsync(role, CancellationToken.None);
 
@@ -737,7 +737,7 @@ public class DynamoDbRoleStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var role = new DynamoDbRole();
             await roleStore.CreateAsync(role, CancellationToken.None);
 

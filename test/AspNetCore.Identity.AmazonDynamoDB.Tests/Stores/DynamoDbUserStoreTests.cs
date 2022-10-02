@@ -42,7 +42,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -60,7 +60,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 UserName = Guid.NewGuid().ToString(),
@@ -84,7 +84,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -101,7 +101,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
 
             // Act
@@ -120,7 +120,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
 
             // Act
@@ -143,7 +143,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -160,7 +160,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -177,7 +177,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
 
             // Act
@@ -197,7 +197,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -214,7 +214,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -231,7 +231,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
 
             // Act
@@ -251,7 +251,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -269,7 +269,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -296,7 +296,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -313,7 +313,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var user = await userStore.FindByEmailAsync("doesnt@exi.st", CancellationToken.None);
@@ -332,7 +332,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -356,7 +356,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -373,7 +373,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var user = await userStore.FindByIdAsync(Guid.NewGuid().ToString(), CancellationToken.None);
@@ -392,7 +392,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -415,7 +415,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -432,7 +432,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -449,7 +449,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var user = await userStore.FindByLoginAsync(
@@ -469,7 +469,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -500,7 +500,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -517,7 +517,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var user = await userStore.FindByNameAsync("doesnt@exi.st", CancellationToken.None);
@@ -536,7 +536,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 UserName = "test",
@@ -560,7 +560,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -578,7 +578,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 AccessFailedCount = 10,
@@ -601,7 +601,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -619,7 +619,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -642,7 +642,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -660,7 +660,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 EmailConfirmed = true,
@@ -683,7 +683,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -701,7 +701,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 LockoutEnabled = true,
@@ -724,7 +724,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -742,7 +742,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 LockoutEnd = DateTime.UtcNow,
@@ -765,7 +765,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -783,7 +783,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 NormalizedEmail = "TEST@TEST.SE",
@@ -806,7 +806,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -824,7 +824,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 NormalizedUserName = "TEST",
@@ -847,7 +847,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -865,7 +865,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -905,7 +905,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -923,7 +923,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -962,7 +962,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -980,7 +980,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PasswordHash = "TEST",
@@ -1003,7 +1003,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1021,7 +1021,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PhoneNumber = "TEST",
@@ -1044,7 +1044,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1062,7 +1062,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PhoneNumberConfirmed = true,
@@ -1085,7 +1085,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1103,7 +1103,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 SecurityStamp = "TEST",
@@ -1126,7 +1126,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1144,7 +1144,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 TwoFactorEnabled = true,
@@ -1167,7 +1167,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1185,7 +1185,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Id = "TEST",
@@ -1208,7 +1208,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1226,7 +1226,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 UserName = "TEST",
@@ -1249,7 +1249,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1267,7 +1267,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PasswordHash = "TEST",
@@ -1290,7 +1290,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1308,7 +1308,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 AccessFailedCount = 5,
@@ -1331,7 +1331,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1351,7 +1351,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             await context.SaveAsync(user);
             var userRoles = new DynamoDbUserRole
@@ -1377,7 +1377,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1395,7 +1395,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -1419,7 +1419,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1437,7 +1437,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 EmailConfirmed = true,
@@ -1462,7 +1462,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1480,7 +1480,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 LockoutEnabled = true,
@@ -1505,7 +1505,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1523,7 +1523,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 LockoutEnd = default,
@@ -1548,7 +1548,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1566,7 +1566,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 NormalizedEmail = "TEST@TEST.SE",
@@ -1591,7 +1591,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1609,7 +1609,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 NormalizedUserName = "TEST",
@@ -1634,7 +1634,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1652,7 +1652,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PasswordHash = "Secret",
@@ -1677,7 +1677,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1695,7 +1695,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PhoneNumber = "1111111",
@@ -1720,7 +1720,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1738,7 +1738,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 PhoneNumberConfirmed = false,
@@ -1763,7 +1763,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1781,7 +1781,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 TwoFactorEnabled = false,
@@ -1806,7 +1806,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1824,7 +1824,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 SecurityStamp = "some-string",
@@ -1849,7 +1849,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1867,7 +1867,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 UserName = "some-user",
@@ -1892,7 +1892,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1910,7 +1910,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 Email = "test@test.se",
@@ -1945,7 +1945,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -1963,7 +1963,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             var roleName = "test-role";
             var userCount = 10;
@@ -1998,7 +1998,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2016,7 +2016,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser
             {
                 AccessFailedCount = 5,
@@ -2039,7 +2039,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2056,7 +2056,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2074,7 +2074,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             await context.SaveAsync(user);
 
@@ -2109,7 +2109,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2126,7 +2126,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2144,7 +2144,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             await context.SaveAsync(user);
             var roleName = "test";
@@ -2171,7 +2171,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2188,7 +2188,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2205,7 +2205,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2223,7 +2223,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             await context.SaveAsync(user);
             var loginProvider = "test";
@@ -2252,7 +2252,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2270,7 +2270,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             var claimType = "test-claim-type";
             var claimValue = "test-claim-value";
@@ -2308,7 +2308,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2330,7 +2330,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             var user = new DynamoDbUser();
             await context.SaveAsync(user);
@@ -2362,7 +2362,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act & Assert
             var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
@@ -2379,7 +2379,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
             // Act
             var result = await userStore.UpdateAsync(new(), CancellationToken.None);
@@ -2398,7 +2398,7 @@ public class DynamoDbUserStoreTests
             // Arrange
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             await userStore.CreateAsync(user, CancellationToken.None);
 
@@ -2421,7 +2421,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             await userStore.CreateAsync(user, CancellationToken.None);
 
@@ -2445,7 +2445,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Claims.Add("test", new() { "test" });
             await userStore.CreateAsync(user, CancellationToken.None);
@@ -2473,7 +2473,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Claims.Add("test", new() { "test" });
             await userStore.CreateAsync(user, CancellationToken.None);
@@ -2499,7 +2499,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Roles.Add("test");
             await userStore.CreateAsync(user, CancellationToken.None);
@@ -2527,7 +2527,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Roles.Add("test");
             await userStore.CreateAsync(user, CancellationToken.None);
@@ -2553,7 +2553,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Logins.Add(new()
             {
@@ -2585,7 +2585,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Logins.Add(new()
             {
@@ -2615,7 +2615,7 @@ public class DynamoDbUserStoreTests
             var context = new DynamoDBContext(database.Client);
             var options = TestUtils.GetOptions(new() { Database = database.Client });
             var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
-            await DynamoDbSetup.EnsureInitializedAsync(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
             var user = new DynamoDbUser();
             user.Claims.Add("test", new() { "test", "test2" });
 

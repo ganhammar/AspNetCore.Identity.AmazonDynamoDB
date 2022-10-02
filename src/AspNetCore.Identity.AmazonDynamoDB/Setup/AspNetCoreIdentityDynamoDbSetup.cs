@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
-public static class DynamoDbSetup
+public static class AspNetCoreIdentityDynamoDbSetup
 {
     public static void EnsureInitialized(IServiceProvider services)
     {
