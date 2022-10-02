@@ -5,13 +5,13 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 
 public static class DynamoDbSetup
 {
-    public static void EnsureInitialized(ServiceProvider services)
+    public static void EnsureInitialized(IServiceProvider services)
     {
         EnsureInitialized(services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>());
     }
 
     public static async Task EnsureInitializedAsync(
-        ServiceProvider services,
+        IServiceProvider services,
         CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(
