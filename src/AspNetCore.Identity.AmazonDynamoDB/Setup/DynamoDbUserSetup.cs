@@ -251,17 +251,17 @@ public static class DynamoDbUserSetup
             {
                 new KeySchemaElement
                 {
-                    AttributeName = "ClaimType",
+                    AttributeName = "Id",
                     KeyType = KeyType.HASH,
-                },
-                new KeySchemaElement
-                {
-                    AttributeName = "UserId",
-                    KeyType = KeyType.RANGE,
                 },
             },
             AttributeDefinitions = new List<AttributeDefinition>
             {
+                new AttributeDefinition
+                {
+                    AttributeName = "Id",
+                    AttributeType = ScalarAttributeType.S,
+                },
                 new AttributeDefinition
                 {
                     AttributeName = "ClaimType",

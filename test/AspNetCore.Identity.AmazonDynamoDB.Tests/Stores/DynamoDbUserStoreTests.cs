@@ -2605,4 +2605,29 @@ public class DynamoDbUserStoreTests
             Assert.Equal(1, response.Table.ItemCount);
         }
     }
+
+    [Fact]
+    public async Task Should_SaveClaims_When_OneKeyHasMultipleValues()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            user.Claims.Add("test", new() { "test", "test2" });
+
+            // Act
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserClaimsTableName,
+            });
+            Assert.Equal(2, response.Table.ItemCount);
+        }
+    }
 }

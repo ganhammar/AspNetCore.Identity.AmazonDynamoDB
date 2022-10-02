@@ -6,8 +6,12 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 public class DynamoDbUserClaim
 {
     [DynamoDBHashKey]
+    public string Id
+    { 
+        get => $"{UserId}#{ClaimType}#{ClaimValue}";
+        set { }
+    }
     public string? ClaimType { get; set; }
-    [DynamoDBRangeKey]
     public string? UserId { get; set; }
     public string? ClaimValue { get; set; }
 }
