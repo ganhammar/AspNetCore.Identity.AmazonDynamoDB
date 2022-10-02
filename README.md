@@ -31,7 +31,7 @@ services
     });
 ```
 
-Finally you need to ensure that tables and index has been added:
+Finally you need to ensure that tables and indexes has been added:
 
 ```c#
 DynamoDbSetup.EnsureInitialized(serviceProvider);
