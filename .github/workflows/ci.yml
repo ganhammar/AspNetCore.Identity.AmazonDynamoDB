@@ -53,7 +53,7 @@ jobs:
 
       - name: Publish to NuGet
         id: publish_nuget
-        uses: rohith/publish-nuget@v2
+        uses: brandedoutcast/publish-nuget@v2
         with:
           PROJECT_FILE_PATH: src/AspNetCore.Identity.AmazonDynamoDB/AspNetCore.Identity.AmazonDynamoDB.csproj
           NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
