@@ -1,6 +1,6 @@
 # AspNetCore.Identity.AmazonDynamoDB
 
-![Build Status](https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB/actions/workflows/ci.yml/badge.svg) [![codecov](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB/branch/main/graph/badge.svg?token=S4M1VCX8J6)](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB) [![NuGet](https://img.shields.io/nuget/v/AspNetCore.Identity.AmazonDynamoDB)](https://www.nuget.org/packages/AspNetCore.Identity.AmazonDynamoDB)
+![Build Status](https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB/actions/workflows/ci-cd.yml/badge.svg) [![codecov](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB/branch/main/graph/badge.svg?token=S4M1VCX8J6)](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB) [![NuGet](https://img.shields.io/nuget/v/AspNetCore.Identity.AmazonDynamoDB)](https://www.nuget.org/packages/AspNetCore.Identity.AmazonDynamoDB)
 
 An [ASP.NET Core Identity 6.0](https://github.com/dotnet/aspnetcore/tree/main/src/Identity) provider for [DynamoDB](https://aws.amazon.com/dynamodb/).
 
