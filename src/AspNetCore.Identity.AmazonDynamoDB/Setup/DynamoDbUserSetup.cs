@@ -21,6 +21,24 @@ public static class DynamoDbUserSetup
                 options.UsersTableName, Constants.DefaultUsersTableName));
         }
 
+        if (options.UserClaimsTableName != Constants.DefaultUserClaimsTableName)
+        {
+            AWSConfigsDynamoDB.Context.AddAlias(new TableAlias(
+                options.UserClaimsTableName, Constants.DefaultUserClaimsTableName));
+        }
+
+        if (options.UserLoginsTableName != Constants.DefaultUserLoginsTableName)
+        {
+            AWSConfigsDynamoDB.Context.AddAlias(new TableAlias(
+                options.UserLoginsTableName, Constants.DefaultUserLoginsTableName));
+        }
+
+        if (options.UserRolesTableName != Constants.DefaultUserRolesTableName)
+        {
+            AWSConfigsDynamoDB.Context.AddAlias(new TableAlias(
+                options.UserRolesTableName, Constants.DefaultUserRolesTableName));
+        }
+
         return SetupTable(options, cancellationToken);
     }
 

@@ -24,6 +24,7 @@ public class DynamoDbSetupTests
             Assert.Contains(Constants.DefaultUsersTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserClaimsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
         }
     }
@@ -47,7 +48,42 @@ public class DynamoDbSetupTests
             Assert.Contains(Constants.DefaultUsersTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserClaimsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetupTablesWithDifferentNames_When_OtherIsSpecified()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var rolesTableName = "roller";
+            var usersTableName = "anvandare";
+            var userClaimsTableName = "anvandare_ansprak";
+            var userLoginsTableName = "anvandare_inloggningar";
+            var userRolesTableName = "anvandare_roller";
+            var options = TestUtils.GetOptions(new()
+            {
+                Database = database.Client,
+                RolesTableName = rolesTableName,
+                UsersTableName = usersTableName,
+                UserClaimsTableName = userClaimsTableName,
+                UserLoginsTableName = userLoginsTableName,
+                UserRolesTableName = userRolesTableName,
+            });
+
+            // Act
+            await DynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Assert
+            var tableNames = await database.Client.ListTablesAsync();
+            Assert.Contains(usersTableName, tableNames.TableNames);
+            Assert.Contains(userClaimsTableName, tableNames.TableNames);
+            Assert.Contains(userLoginsTableName, tableNames.TableNames);
+            Assert.Contains(userRolesTableName, tableNames.TableNames);
+            Assert.Contains(rolesTableName, tableNames.TableNames);
         }
     }
 }
