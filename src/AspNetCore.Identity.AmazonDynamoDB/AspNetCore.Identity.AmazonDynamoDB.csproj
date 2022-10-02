@@ -4,6 +4,13 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+    <Authors>Anton Ganhammar</Authors>
+    <RepositoryUrl>https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB</PackageProjectUrl>
+    <Description>ASP.NET Core Identity provider for DynamoDB</Description>
+    <PackageTags>ASP.NET Core Identity, DynamoDB</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
