@@ -1,4 +1,4 @@
-name: 'CI: Restore, Build & Test'
+name: 'CI/CD'
 
 on:
   - push
@@ -7,7 +7,7 @@ on:
 jobs:
   build:
 
-    name: Build
+    name: 'CI: Restore, Build & Test'
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +38,7 @@ jobs:
 
   publish:
 
-    name: Publish
+    name: 'CD: Pack & Publish'
     needs: build
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
@@ -52,9 +52,13 @@ jobs:
           dotnet-version: |
             6.0.x
 
-      - name: Publish to NuGet
-        id: publish_nuget
-        uses: brandedoutcast/publish-nuget@v2
-        with:
-          PROJECT_FILE_PATH: src/AspNetCore.Identity.AmazonDynamoDB/AspNetCore.Identity.AmazonDynamoDB.csproj
-          NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
+      - name: Pack
+        run: |
+          dotnet pack
+
+      - name: Publish
+        run: |
+          dotnet nuget push **\*.nupkg \
+            --source 'https://api.nuget.org/v3/index.json' \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --skip-duplicate
