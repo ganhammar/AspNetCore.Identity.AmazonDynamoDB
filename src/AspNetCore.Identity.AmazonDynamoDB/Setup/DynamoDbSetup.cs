@@ -1,9 +1,24 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
 public static class DynamoDbSetup
 {
+    public static void EnsureInitialized(ServiceProvider services)
+    {
+        EnsureInitialized(services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>());
+    }
+
+    public static async Task EnsureInitializedAsync(
+        ServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync(
+            services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>(),
+            cancellationToken);
+    }
+
     public static async Task EnsureInitializedAsync(
         IOptionsMonitor<DynamoDbOptions> options,
         CancellationToken cancellationToken = default)
