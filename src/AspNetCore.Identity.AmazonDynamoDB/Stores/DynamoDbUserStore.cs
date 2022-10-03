@@ -35,7 +35,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
         if (_options.Database == default && database == default)
         {
-            new ArgumentNullException(nameof(_options.Database));
+            throw new ArgumentNullException(nameof(_options.Database));
         }
 
         _client = database ?? _options.Database!;
