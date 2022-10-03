@@ -30,7 +30,29 @@ public class DynamoDbUserStoreTests
             var exception = Assert.Throws<ArgumentNullException>(() =>
                 new DynamoDbUserStore<DynamoDbUser>(TestUtils.GetOptions(new())));
 
-            Assert.Equal("_options.Database", exception.ParamName);
+            Assert.Equal("Database", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_GetDatabaseFromServiceProvider_When_DatabaseIsNullInOptions()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new());
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options, database.Client);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options, database.Client);
+
+            // Act
+            await userStore.CreateAsync(new(), CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUsersTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
         }
     }
 

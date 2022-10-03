@@ -1,5 +1,7 @@
+using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
@@ -29,7 +31,29 @@ public class DynamoDbRoleStoreTests
             var exception = Assert.Throws<ArgumentNullException>(() =>
                 new DynamoDbRoleStore<DynamoDbRole>(TestUtils.GetOptions(new())));
 
-            Assert.Equal("_options.Database", exception.ParamName);
+            Assert.Equal("Database", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_GetDatabaseFromServiceProvider_When_DatabaseIsNullInOptions()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new());
+            var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options, database.Client);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options, database.Client);
+
+            // Act
+            await roleStore.CreateAsync(new(), CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultRolesTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
         }
     }
 

@@ -10,10 +10,13 @@ public static class DynamoDbRoleSetup
 {
     public static Task EnsureInitializedAsync(
         DynamoDbOptions options,
+        IAmazonDynamoDB? database = default,
         CancellationToken cancellationToken = default)
     {
+        var dynamoDb = database ?? options.Database;
+
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(options.Database);
+        ArgumentNullException.ThrowIfNull(dynamoDb);
 
         if (options.RolesTableName != Constants.DefaultRolesTableName)
         {
@@ -21,11 +24,12 @@ public static class DynamoDbRoleSetup
                 options.RolesTableName, Constants.DefaultRolesTableName));
         }
 
-        return SetupTable(options, cancellationToken);
+        return SetupTable(options, dynamoDb, cancellationToken);
     }
 
     private static async Task SetupTable(
         DynamoDbOptions options,
+        IAmazonDynamoDB database,
         CancellationToken cancellationToken)
     {
         var roleGlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
@@ -45,19 +49,20 @@ public static class DynamoDbRoleSetup
             },
         };
 
-        var tableNames = await options.Database!.ListTablesAsync(cancellationToken);
+        var tableNames = await database.ListTablesAsync(cancellationToken);
 
         if (!tableNames.TableNames.Contains(options.RolesTableName))
         {
             await CreateRolesTableAsync(
                 options,
+                database,
                 roleGlobalSecondaryIndexes,
                 cancellationToken);
         }
         else
         {
             await DynamoDbUtils.UpdateSecondaryIndexes(
-                options.Database,
+                database,
                 options.RolesTableName,
                 roleGlobalSecondaryIndexes,
                 cancellationToken);
@@ -66,10 +71,11 @@ public static class DynamoDbRoleSetup
 
     private static async Task CreateRolesTableAsync(
         DynamoDbOptions options,
+        IAmazonDynamoDB database,
         List<GlobalSecondaryIndex>? globalSecondaryIndexes,
         CancellationToken cancellationToken)
     {
-        var response = await options.Database!.CreateTableAsync(new CreateTableRequest
+        var response = await database.CreateTableAsync(new CreateTableRequest
         {
             TableName = options.RolesTableName,
             ProvisionedThroughput = options.ProvisionedThroughput,
@@ -104,7 +110,7 @@ public static class DynamoDbRoleSetup
         }
 
         await DynamoDbUtils.WaitForActiveTableAsync(
-            options.Database,
+            database,
             options.RolesTableName,
             cancellationToken);
     }

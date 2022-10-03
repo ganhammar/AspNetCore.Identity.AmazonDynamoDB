@@ -1,3 +1,4 @@
+using Amazon.DynamoDBv2;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -12,23 +13,26 @@ public static class AspNetCoreIdentityDynamoDbSetup
 
     public static async Task EnsureInitializedAsync(
         IServiceProvider services,
+        IAmazonDynamoDB? database = default,
         CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(
             services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>(),
+            database,
             cancellationToken);
     }
 
     public static async Task EnsureInitializedAsync(
         IOptionsMonitor<DynamoDbOptions> options,
+        IAmazonDynamoDB? database = default,
         CancellationToken cancellationToken = default)
     {
         var promises = new[]
         {
             DynamoDbUserSetup.EnsureInitializedAsync(
-                options.CurrentValue),
+                options.CurrentValue, database),
             DynamoDbRoleSetup.EnsureInitializedAsync(
-                options.CurrentValue),
+                options.CurrentValue, database),
         };
 
         await Task.WhenAll(promises);

@@ -3,6 +3,7 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
@@ -16,15 +17,20 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     private IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
     private DynamoDbOptions _options => _optionsMonitor.CurrentValue;
 
-    public DynamoDbRoleStore(IOptionsMonitor<DynamoDbOptions> optionsMonitor)
+    public DynamoDbRoleStore(
+        IOptionsMonitor<DynamoDbOptions> optionsMonitor,
+        IAmazonDynamoDB? database = default)
     {
         ArgumentNullException.ThrowIfNull(optionsMonitor);
 
         _optionsMonitor = optionsMonitor;
 
-        ArgumentNullException.ThrowIfNull(_options.Database);
+        if (_options.Database == default && database == default)
+        {
+            new ArgumentNullException(nameof(_options.Database));
+        }
 
-        _client = _options.Database;
+        _client = database ?? _options.Database!;
         _context = new DynamoDBContext(_client);
     }
 
