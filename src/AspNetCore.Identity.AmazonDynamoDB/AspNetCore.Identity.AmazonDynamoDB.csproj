@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
     <Authors>Anton Ganhammar</Authors>
     <RepositoryUrl>https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

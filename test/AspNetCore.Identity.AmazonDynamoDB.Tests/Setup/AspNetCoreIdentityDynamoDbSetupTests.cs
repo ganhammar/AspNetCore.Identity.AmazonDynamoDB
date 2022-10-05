@@ -123,6 +123,29 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     }
 
     [Fact]
+    public async Task Should_SetupTables_When_CalledSynchronouslyWithDatbaseInServiceProvider()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddSingleton<IAmazonDynamoDB>(database.Client);
+            CreateBuilder(services);
+
+            // Act
+            AspNetCoreIdentityDynamoDbSetup.EnsureInitialized(services.BuildServiceProvider());
+
+            // Assert
+            var tableNames = await database.Client.ListTablesAsync();
+            Assert.Contains(Constants.DefaultUsersTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserClaimsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+        }
+    }
+
+    [Fact]
     public async Task Should_SetupTablesWithDifferentNames_When_OtherIsSpecified()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())

@@ -8,7 +8,11 @@ public static class AspNetCoreIdentityDynamoDbSetup
 {
     public static void EnsureInitialized(IServiceProvider services)
     {
-        EnsureInitialized(services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>());
+        var database = services.GetService<IAmazonDynamoDB>();
+
+        EnsureInitialized(
+            services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>(),
+            database);
     }
 
     public static async Task EnsureInitializedAsync(
@@ -39,8 +43,10 @@ public static class AspNetCoreIdentityDynamoDbSetup
         await Task.WhenAll(promises);
     }
 
-    public static void EnsureInitialized(IOptionsMonitor<DynamoDbOptions> options)
+    public static void EnsureInitialized(
+        IOptionsMonitor<DynamoDbOptions> options,
+        IAmazonDynamoDB? database = default)
     {
-        EnsureInitializedAsync(options).GetAwaiter().GetResult();
+        EnsureInitializedAsync(options, database).GetAwaiter().GetResult();
     }
 }
