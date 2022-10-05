@@ -1,3 +1,4 @@
+using Amazon.DynamoDBv2;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -84,6 +85,29 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             // Arrange
             var services = new ServiceCollection();
             CreateBuilder(services).UseDatabase(database.Client);
+
+            // Act
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(services.BuildServiceProvider());
+
+            // Assert
+            var tableNames = await database.Client.ListTablesAsync();
+            Assert.Contains(Constants.DefaultUsersTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserClaimsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SetupTables_When_CalledAsynchronouslyWithDatbaseInServiceProvider()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var services = new ServiceCollection();
+            services.AddSingleton<IAmazonDynamoDB>(database.Client);
+            CreateBuilder(services);
 
             // Act
             await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(services.BuildServiceProvider());
