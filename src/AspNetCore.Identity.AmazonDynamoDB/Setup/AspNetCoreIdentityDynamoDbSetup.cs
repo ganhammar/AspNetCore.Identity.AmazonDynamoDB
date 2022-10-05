@@ -13,9 +13,10 @@ public static class AspNetCoreIdentityDynamoDbSetup
 
     public static async Task EnsureInitializedAsync(
         IServiceProvider services,
-        IAmazonDynamoDB? database = default,
         CancellationToken cancellationToken = default)
     {
+        var database = services.GetService<IAmazonDynamoDB>();
+
         await EnsureInitializedAsync(
             services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>(),
             database,

@@ -3,7 +3,6 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
@@ -22,8 +21,6 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 {
     private IAmazonDynamoDB _client;
     private IDynamoDBContext _context;
-    private IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
-    private DynamoDbOptions _options => _optionsMonitor.CurrentValue;
 
     public DynamoDbUserStore(
         IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -31,14 +28,14 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
     {
         ArgumentNullException.ThrowIfNull(optionsMonitor);
 
-        _optionsMonitor = optionsMonitor;
+        var options = optionsMonitor.CurrentValue;
 
-        if (_options.Database == default && database == default)
+        if (options.Database == default && database == default)
         {
-            throw new ArgumentNullException(nameof(_options.Database));
+            throw new ArgumentNullException(nameof(options.Database));
         }
 
-        _client = database ?? _options.Database!;
+        _client = database ?? options.Database!;
         _context = new DynamoDBContext(_client);
     }
 
