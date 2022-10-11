@@ -14,8 +14,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.5" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.9" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.5.14" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.10" />
   </ItemGroup>
 
 </Project>

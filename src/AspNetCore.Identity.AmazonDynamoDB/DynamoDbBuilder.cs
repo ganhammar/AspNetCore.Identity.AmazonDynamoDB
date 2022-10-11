@@ -50,6 +50,13 @@ public class DynamoDbBuilder
         return Configure(options => options.UserRolesTableName = name);
     }
 
+    public DynamoDbBuilder SetUserTokensTableName(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        return Configure(options => options.UserTokensTableName = name);
+    }
+
     public DynamoDbBuilder SetUsersTableName(string name)
     {
         ArgumentNullException.ThrowIfNull(name);

@@ -28,6 +28,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserTokensTableName, tableNames.TableNames);
         }
     }
 
@@ -50,6 +51,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserTokensTableName, tableNames.TableNames);
         }
     }
 
@@ -74,6 +76,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserTokensTableName, tableNames.TableNames);
         }
     }
 
@@ -96,6 +99,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserTokensTableName, tableNames.TableNames);
         }
     }
 
@@ -119,6 +123,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserTokensTableName, tableNames.TableNames);
         }
     }
 
@@ -142,6 +147,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(Constants.DefaultUserLoginsTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultUserRolesTableName, tableNames.TableNames);
             Assert.Contains(Constants.DefaultRolesTableName, tableNames.TableNames);
+            Assert.Contains(Constants.DefaultUserTokensTableName, tableNames.TableNames);
         }
     }
 
@@ -156,6 +162,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             var userClaimsTableName = "anvandare_ansprak";
             var userLoginsTableName = "anvandare_inloggningar";
             var userRolesTableName = "anvandare_roller";
+            var userTokensTableName = "anvandare_bevis";
             var options = TestUtils.GetOptions(new()
             {
                 Database = database.Client,
@@ -164,6 +171,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
                 UserClaimsTableName = userClaimsTableName,
                 UserLoginsTableName = userLoginsTableName,
                 UserRolesTableName = userRolesTableName,
+                UserTokensTableName = userTokensTableName,
             });
 
             // Act
@@ -176,6 +184,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
             Assert.Contains(userLoginsTableName, tableNames.TableNames);
             Assert.Contains(userRolesTableName, tableNames.TableNames);
             Assert.Contains(rolesTableName, tableNames.TableNames);
+            Assert.Contains(userTokensTableName, tableNames.TableNames);
         }
     }
 

@@ -13,4 +13,7 @@ public class DynamoDbUser : IdentityUser
     public List<DynamoDbUserLogin> Logins { get; set; } = new();
     [DynamoDBIgnore]
     public List<string> Roles { get; set; } = new();
+    [DynamoDBIgnore]
+    public List<IdentityUserToken<string>> Tokens { get; set; }
+        = new List<IdentityUserToken<string>>();
 }

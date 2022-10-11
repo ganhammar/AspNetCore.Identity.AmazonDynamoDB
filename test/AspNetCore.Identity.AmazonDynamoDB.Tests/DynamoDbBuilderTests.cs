@@ -86,6 +86,33 @@ public class DynamoDbBuilderTests
     }
 
     [Fact]
+    public void Should_ThrowException_When_SetUserTokensTableNameAndNameIsNull()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            CreateBuilder(services).SetUserTokensTableName(null!));
+        Assert.Equal("name", exception.ParamName);
+    }
+
+    [Fact]
+    public void Should_SetTableName_When_CallingSetUserTokensTableName()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        CreateBuilder(services).SetUserTokensTableName("test");
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
+        Assert.Equal("test", options.UserTokensTableName);
+    }
+
+    [Fact]
     public void Should_ThrowException_When_SetUserLoginsTableNameAndNameIsNull()
     {
         // Arrange
