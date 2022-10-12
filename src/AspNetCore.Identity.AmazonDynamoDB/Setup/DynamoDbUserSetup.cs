@@ -149,6 +149,19 @@ public static class DynamoDbUserSetup
         };
         var userTokensGlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
         {
+            new GlobalSecondaryIndex
+            {
+                IndexName = "UserId-index",
+                KeySchema = new List<KeySchemaElement>
+                {
+                    new KeySchemaElement("UserId", KeyType.HASH),
+                },
+                ProvisionedThroughput = options.ProvisionedThroughput,
+                Projection = new Projection
+                {
+                    ProjectionType = ProjectionType.ALL,
+                },
+            },
         };
 
         var tableNames = await database.ListTablesAsync(cancellationToken);
@@ -468,25 +481,20 @@ public static class DynamoDbUserSetup
             {
                 new KeySchemaElement
                 {
-                    AttributeName = "UserId",
+                    AttributeName = "Id",
                     KeyType = KeyType.HASH,
-                },
-                new KeySchemaElement
-                {
-                    AttributeName = "LoginProvider",
-                    KeyType = KeyType.RANGE,
                 },
             },
             AttributeDefinitions = new List<AttributeDefinition>
             {
                 new AttributeDefinition
                 {
-                    AttributeName = "UserId",
+                    AttributeName = "Id",
                     AttributeType = ScalarAttributeType.S,
                 },
                 new AttributeDefinition
                 {
-                    AttributeName = "LoginProvider",
+                    AttributeName = "UserId",
                     AttributeType = ScalarAttributeType.S,
                 },
             },

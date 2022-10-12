@@ -6,8 +6,12 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 public class DynamoDbUserToken
 {
     [DynamoDBHashKey]
+    public string Id
+    { 
+        get => $"{UserId}#{LoginProvider}#{Name}";
+        set { }
+    }
     public virtual string? UserId { get; set; }
-    [DynamoDBRangeKey]
     public virtual string? LoginProvider { get; set; }
     public virtual string? Name { get; set; }
     public virtual string? Value { get; set; }

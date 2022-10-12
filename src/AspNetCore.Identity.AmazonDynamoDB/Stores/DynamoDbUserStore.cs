@@ -16,11 +16,18 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         IUserClaimStore<TUserEntity>,
         IUserSecurityStampStore<TUserEntity>,
         IUserTwoFactorStore<TUserEntity>,
-        IUserLoginStore<TUserEntity>
+        IUserLoginStore<TUserEntity>,
+        IUserAuthenticatorKeyStore<TUserEntity>,
+        IUserAuthenticationTokenStore<TUserEntity>,
+        IUserTwoFactorRecoveryCodeStore<TUserEntity>,
+        IProtectedUserStore<TUserEntity>
     where TUserEntity : DynamoDbUser, new()
 {
     private IAmazonDynamoDB _client;
     private IDynamoDBContext _context;
+    private const string InternalLoginProvider = "[AspNetUserStore]";
+    private const string AuthenticatorKeyTokenName = "AuthenticatorKey";
+    private const string RecoveryCodeTokenName = "RecoveryCodes";
 
     public DynamoDbUserStore(
         IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -102,6 +109,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         await SaveClaims(user, cancellationToken);
         await SaveLogins(user, cancellationToken);
         await SaveRoles(user, cancellationToken);
+        await SaveTokens(user, cancellationToken);
 
         return IdentityResult.Success;
     }
@@ -638,6 +646,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         await SaveClaims(user, cancellationToken);
         await SaveLogins(user, cancellationToken);
         await SaveRoles(user, cancellationToken);
+        await SaveTokens(user, cancellationToken);
 
         return IdentityResult.Success;
     }
@@ -781,6 +790,182 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         }
 
         await batch.ExecuteAsync(cancellationToken);
+    }
+
+    public async Task RemoveDeletedTokens(TUserEntity user, CancellationToken cancellationToken)
+    {
+        var persistedTokens = await GetRawTokens(user, cancellationToken);
+        var newTokens = user.Tokens.Select(x => new DynamoDbUserToken
+        {
+            UserId = user.Id,
+            LoginProvider = x.LoginProvider,
+            Name = x.Name,
+            Value = x.Value,
+        });
+
+        var toBeDeleted = persistedTokens.Except(newTokens);
+
+        if (toBeDeleted.Any())
+        {
+            var batch = _context.CreateBatchWrite<DynamoDbUserToken>();
+
+            foreach (var token in toBeDeleted)
+            {
+                batch.AddDeleteItem(token);
+            }
+
+            await batch.ExecuteAsync();
+        }
+    }
+
+    public async Task SaveTokens(TUserEntity user, CancellationToken cancellationToken)
+    {
+        await RemoveDeletedTokens(user, cancellationToken);
+
+        if (user.Tokens.Any() == false)
+        {
+            return;
+        }
+
+        var batch = _context.CreateBatchWrite<DynamoDbUserToken>();
+
+        foreach (var token in user.Tokens)
+        {
+            batch.AddPutItem(new()
+            {
+                UserId = user.Id,
+                LoginProvider = token.LoginProvider,
+                Name = token.Name,
+                Value = token.Value,
+            });
+        }
+
+        await batch.ExecuteAsync(cancellationToken);
+    }
+
+    public Task SetAuthenticatorKeyAsync(TUserEntity user, string key, CancellationToken cancellationToken)
+        => SetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, key, cancellationToken);
+
+    public Task<string> GetAuthenticatorKeyAsync(TUserEntity user, CancellationToken cancellationToken)
+        => GetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, cancellationToken);
+
+    public async Task RemoveTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(name);
+
+        var entry = await FindTokenAsync(user, loginProvider, name, cancellationToken);
+        if (entry != null)
+        {
+            user.Tokens.RemoveAll(x => x.LoginProvider == entry.LoginProvider && x.Name == entry.Name);
+        }
+    }
+
+    public async Task<string> GetTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(loginProvider);
+        ArgumentNullException.ThrowIfNull(name);
+
+        var token = await FindTokenAsync(user, loginProvider, name, cancellationToken);
+        return token?.Value ?? string.Empty;
+    }
+
+    public Task ReplaceCodesAsync(TUserEntity user, IEnumerable<string> recoveryCodes, CancellationToken cancellationToken)
+    {
+        var mergedCodes = string.Join(";", recoveryCodes);
+        return SetTokenAsync(user, InternalLoginProvider, RecoveryCodeTokenName, mergedCodes, cancellationToken);
+    }
+
+    public async Task<bool> RedeemCodeAsync(TUserEntity user, string code, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(code);
+
+        var mergedCodes = await GetTokenAsync(user, InternalLoginProvider, RecoveryCodeTokenName, cancellationToken) ?? "";
+        var splitCodes = mergedCodes.Split(';');
+        if (splitCodes.Contains(code))
+        {
+            var updatedCodes = new List<string>(splitCodes.Where(s => s != code));
+            await ReplaceCodesAsync(user, updatedCodes, cancellationToken);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public async Task<int> CountCodesAsync(TUserEntity user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        var mergedCodes = await GetTokenAsync(user, InternalLoginProvider, RecoveryCodeTokenName, cancellationToken) ?? "";
+        if (mergedCodes.Length > 0)
+        {
+            return mergedCodes.Split(';').Length;
+        }
+        return 0;
+    }
+
+    public async Task SetTokenAsync(TUserEntity user, string loginProvider, string name, string value, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        var token = await FindTokenAsync(user, loginProvider, name, cancellationToken);
+        if (token == null)
+        {
+            user.Tokens.Add(new IdentityUserToken<string>
+            {
+                UserId = user.Id.ToString(),
+                LoginProvider = loginProvider,
+                Name = name,
+                Value = value
+            });
+        }
+        else
+        {
+            token.Value = value;
+
+            var idx = user.Tokens.FindIndex(x => x.LoginProvider == token.LoginProvider && x.Name == token.Name);
+            user.Tokens[idx] = token;
+        }
+    }
+
+    private async Task<List<DynamoDbUserToken>> GetRawTokens(TUserEntity user, CancellationToken cancellationToken)
+    {
+        var search = _context.FromQueryAsync<DynamoDbUserToken>(new QueryOperationConfig
+        {
+            IndexName = "UserId-index",
+            KeyExpression = new Expression
+            {
+                ExpressionStatement = "UserId = :userId",
+                ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+                {
+                    { ":userId", user.Id },
+                },
+            },
+        });
+        return await search.GetRemainingAsync(cancellationToken);
+    }
+
+    private async Task<IdentityUserToken<string>?> FindTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
+    {
+        if (user.Tokens.Any() == false)
+        {
+            var tokens = await GetRawTokens(user, cancellationToken);
+            user.Tokens = tokens
+                .Select(x => new IdentityUserToken<string>
+                {
+                    LoginProvider = x.LoginProvider,
+                    Name = x.Name,
+                    UserId = x.UserId!,
+                    Value = x.Value,
+                })
+                .ToList();
+        }
+
+        return user.Tokens.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
     }
 
     protected virtual void Dispose(bool disposing)

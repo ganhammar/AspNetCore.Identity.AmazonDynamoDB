@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Microsoft.AspNetCore.Identity;
 using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
@@ -2650,6 +2651,239 @@ public class DynamoDbUserStoreTests
                 TableName = Constants.DefaultUserClaimsTableName,
             });
             Assert.Equal(2, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_SaveTokens_When_CreatingUser()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                Tokens = new List<IdentityUserToken<string>>
+                {
+                    new IdentityUserToken<string>
+                    {
+                        LoginProvider = "TestProvider",
+                        Name = "MyTestThing",
+                        Value = "ItsAsEasyAs123",
+                    },
+                },
+            };
+
+            // Act
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserTokensTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_RemoveTokens_When_UpdatingUserAndTokensHasBeenRemoved()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var loginProvider = "TestProvider";
+            var name = "MyTestThing";
+            var user = new DynamoDbUser
+            {
+                Tokens = new List<IdentityUserToken<string>>
+                {
+                    new IdentityUserToken<string>
+                    {
+                        LoginProvider = loginProvider,
+                        Name = name,
+                        Value = "ItsAsEasyAs123",
+                    },
+                },
+            };
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.RemoveTokenAsync(user, loginProvider, name, CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserTokensTableName,
+            });
+            Assert.Equal(0, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_AddToken_When_UpdatingUserAndTokenHasBeenAdded()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser
+            {
+                Tokens = new List<IdentityUserToken<string>>
+                {
+                    new IdentityUserToken<string>
+                    {
+                        LoginProvider = "TestProvider",
+                        Name = "MyTestThing",
+                        Value = "ItsAsEasyAs123",
+                    },
+                },
+            };
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.SetTokenAsync(user, "NewTestProvider", "NewTestThing", "ItsNotAsEasyAs123", CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserTokensTableName,
+            });
+            Assert.Equal(2, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_AddAuthenticatorKey_When_UpdatingUser()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.SetAuthenticatorKeyAsync(user, "Test", CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var response = await database.Client.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = Constants.DefaultUserTokensTableName,
+            });
+            Assert.Equal(1, response.Table.ItemCount);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnAuthenticatorKey_When_OneHasBeenSet()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+            var key = "Test";
+            await userStore.SetAuthenticatorKeyAsync(user, key, CancellationToken.None);
+
+            // Act
+            var userKey = await userStore.GetAuthenticatorKeyAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(key, userKey);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, true, true, "user")]
+    [InlineData(true, false, true, "loginProvider")]
+    [InlineData(true, true, false, "name")]
+    public async Task Should_ThrowException_When_GetTokenParameterIsNull(
+        bool userHasValue, bool loginProviderHasValue, bool nameHasValue, string expectedParamName)
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.GetTokenAsync(
+                    userHasValue ? new() : default!,
+                    loginProviderHasValue ? "test" : default!,
+                    nameHasValue ? "test" : default!,
+                    CancellationToken.None));
+            Assert.Equal(expectedParamName, exception.ParamName);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, true, true, "user")]
+    [InlineData(true, false, true, "loginProvider")]
+    [InlineData(true, true, false, "name")]
+    public async Task Should_ThrowException_When_RemoveTokenParameterIsNull(
+        bool userHasValue, bool loginProviderHasValue, bool nameHasValue, string expectedParamName)
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.RemoveTokenAsync(
+                    userHasValue ? new() : default!,
+                    loginProviderHasValue ? "test" : default!,
+                    nameHasValue ? "test" : default!,
+                    CancellationToken.None));
+            Assert.Equal(expectedParamName, exception.ParamName);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, true, "user")]
+    [InlineData(true, false, "code")]
+    public async Task Should_ThrowException_When_RedeemCodeParameterIsNull(
+        bool userHasValue, bool code, string expectedParamName)
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.RedeemCodeAsync(
+                    userHasValue ? new() : default!,
+                    code ? "test" : default!,
+                    CancellationToken.None));
+            Assert.Equal(expectedParamName, exception.ParamName);
         }
     }
 }
