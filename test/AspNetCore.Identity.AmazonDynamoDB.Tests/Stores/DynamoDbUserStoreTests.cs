@@ -2766,6 +2766,43 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
+    public async Task Should_UpdateExistingToken_When_ItAlreadyExists()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var loginProvider = "TestProvider";
+            var name = "MyTestThing";
+            var user = new DynamoDbUser
+            {
+                Tokens = new List<IdentityUserToken<string>>
+                {
+                    new IdentityUserToken<string>
+                    {
+                        LoginProvider = loginProvider,
+                        Name = name,
+                        Value = "ItsAsEasyAs123",
+                    },
+                },
+            };
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            var value = "SomeNewerValue";
+            await userStore.SetTokenAsync(user, loginProvider, name, value, CancellationToken.None);
+            await userStore.UpdateAsync(user, CancellationToken.None);
+
+            // Assert
+            var token = await userStore.GetTokenAsync(user, loginProvider, name, CancellationToken.None);
+            Assert.Equal(value, token);
+        }
+    }
+
+    [Fact]
     public async Task Should_AddAuthenticatorKey_When_UpdatingUser()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
@@ -2884,6 +2921,64 @@ public class DynamoDbUserStoreTests
                     code ? "test" : default!,
                     CancellationToken.None));
             Assert.Equal(expectedParamName, exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_CountCodes_When_TokenHasValue()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.ReplaceCodesAsync(user, new[] { "1", "2", "3" }, CancellationToken.None);
+            var count = await userStore.CountCodesAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(3, count);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_ReplacingCodesAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.ReplaceCodesAsync(default!, new[] { "1" }, CancellationToken.None));
+
+            Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ThrowException_When_CountingCodesAndUserIsNull()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+
+            // Act
+            var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+                await userStore.CountCodesAsync(default!, CancellationToken.None));
+
+            Assert.Equal("user", exception.ParamName);
         }
     }
 }

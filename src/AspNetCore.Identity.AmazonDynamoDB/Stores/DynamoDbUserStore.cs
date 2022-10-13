@@ -874,6 +874,8 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
 
     public Task ReplaceCodesAsync(TUserEntity user, IEnumerable<string> recoveryCodes, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(user);
+
         var mergedCodes = string.Join(";", recoveryCodes);
         return SetTokenAsync(user, InternalLoginProvider, RecoveryCodeTokenName, mergedCodes, cancellationToken);
     }
