@@ -2947,6 +2947,27 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
+    public async Task Should_ReturnZero_When_ThereIsNoCodes()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            var count = await userStore.CountCodesAsync(user, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(0, count);
+        }
+    }
+
+    [Fact]
     public async Task Should_ThrowException_When_ReplacingCodesAndUserIsNull()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
@@ -2979,6 +3000,73 @@ public class DynamoDbUserStoreTests
                 await userStore.CountCodesAsync(default!, CancellationToken.None));
 
             Assert.Equal("user", exception.ParamName);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnTrue_When_WhenRedeemingExistingCode()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.ReplaceCodesAsync(user, new[] { "not-it", "the-code", "not-this-either" }, CancellationToken.None);
+            var result = await userStore.RedeemCodeAsync(user, "the-code", CancellationToken.None);
+
+            // Assert
+            Assert.True(result);
+            var count = await userStore.CountCodesAsync(user, CancellationToken.None);
+            Assert.Equal(2, count);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnFalse_When_WhenRedeemingNonExistingCode()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            await userStore.ReplaceCodesAsync(user, new[] { "not-it", "yeah-no-not-it", "not-this-either" }, CancellationToken.None);
+            var result = await userStore.RedeemCodeAsync(user, "the-code", CancellationToken.None);
+
+            // Assert
+            Assert.False(result);
+        }
+    }
+
+    [Fact]
+    public async Task Should_ReturnFalse_When_WhenThereIsNoExistingCodes()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var context = new DynamoDBContext(database.Client);
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var user = new DynamoDbUser();
+            await userStore.CreateAsync(user, CancellationToken.None);
+
+            // Act
+            var result = await userStore.RedeemCodeAsync(user, "the-code", CancellationToken.None);
+
+            // Assert
+            Assert.False(result);
         }
     }
 }
