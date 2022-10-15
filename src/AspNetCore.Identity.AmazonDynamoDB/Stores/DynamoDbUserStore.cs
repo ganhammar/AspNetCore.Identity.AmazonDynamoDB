@@ -61,6 +61,11 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
             user.Claims = ToDictionary(rawClaims);
         }
 
+        AddClaims(user, claims);
+    }
+
+    private void AddClaims(TUserEntity user, IEnumerable<Claim> claims)
+    {
         foreach (var claim in claims)
         {
             if (user.Claims.ContainsKey(claim.Type))
@@ -74,6 +79,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         }
     }
 
+    // TODO: Ensure initialized
     public Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -90,6 +96,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         return Task.CompletedTask;
     }
 
+    // TODO: Ensure initialized
     public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -535,7 +542,7 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         ArgumentNullException.ThrowIfNull(newClaim);
 
         await RemoveClaimsAsync(user, new List<Claim> { claim }, cancellationToken);
-        await AddClaimsAsync(user, new List<Claim> { newClaim }, cancellationToken);
+        AddClaims(user, new List<Claim> { newClaim });
     }
 
     public Task ResetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
