@@ -159,6 +159,38 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
+    public async Task Should_AddToExistingClaims_When_ClaimAlreadyExists()
+    {
+        using (var database = DynamoDbLocalServerUtils.CreateDatabase())
+        {
+            // Arrange
+            var options = TestUtils.GetOptions(new() { Database = database.Client });
+            var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+            await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+            var userId = Guid.NewGuid().ToString();
+            await userStore.CreateAsync(new DynamoDbUser
+            {
+                Id = userId,
+                Claims = new Dictionary<string, List<string>>
+                {
+                    { ClaimTypes.Country, new List<string> { "us" } },
+                },
+            }, CancellationToken.None);
+            var user = await userStore.FindByIdAsync(userId, CancellationToken.None);
+
+            // Act
+            await userStore.AddClaimsAsync(user, new List<Claim>
+            {
+                new Claim(ClaimTypes.Country, "se"),
+            }, CancellationToken.None);
+
+            // Assert
+            Assert.Single(user.Claims);
+            Assert.Equal(2, user.Claims.Where(x => x.Key == ClaimTypes.Country).SelectMany(x => x.Value).Count());
+        }
+    }
+
+    [Fact]
     public async Task Should_ThrowException_When_TryingToAddLoginToAUserThatIsNull()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
@@ -3004,7 +3036,7 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
-    public async Task Should_ReturnTrue_When_WhenRedeemingExistingCode()
+    public async Task Should_ReturnTrue_When_RedeemingExistingCode()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
         {
@@ -3028,7 +3060,7 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
-    public async Task Should_ReturnFalse_When_WhenRedeemingNonExistingCode()
+    public async Task Should_ReturnFalse_When_RedeemingNonExistingCode()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
         {
@@ -3050,7 +3082,7 @@ public class DynamoDbUserStoreTests
     }
 
     [Fact]
-    public async Task Should_ReturnFalse_When_WhenThereIsNoExistingCodes()
+    public async Task Should_ReturnFalse_When_ThereIsNoExistingCodes()
     {
         using (var database = DynamoDbLocalServerUtils.CreateDatabase())
         {

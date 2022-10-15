@@ -46,13 +46,19 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
         _context = new DynamoDBContext(_client);
     }
 
-    public Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
+    public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
 
         if (claims?.Any() != true)
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        if (user.Claims.Any() == false)
+        {
+            var rawClaims = await GetRawClaims(user, cancellationToken);
+            user.Claims = ToDictionary(rawClaims);
         }
 
         foreach (var claim in claims)
@@ -66,8 +72,6 @@ public class DynamoDbUserStore<TUserEntity> : IUserStore<TUserEntity>,
                 user.Claims.Add(claim.Type, new() { claim.Value });
             }
         }
-
-        return Task.CompletedTask;
     }
 
     public Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
