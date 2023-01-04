@@ -7,5 +7,5 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 public class DynamoDbRole : IdentityRole
 {
   public Dictionary<string, List<string>> Claims { get; set; }
-      = new Dictionary<string, List<string>>();
+    = new Dictionary<string, List<string>>();
 }

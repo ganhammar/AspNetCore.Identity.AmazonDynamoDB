@@ -9,9 +9,9 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 public static class DynamoDbRoleSetup
 {
   public static Task EnsureInitializedAsync(
-      DynamoDbOptions options,
-      IAmazonDynamoDB? database = default,
-      CancellationToken cancellationToken = default)
+    DynamoDbOptions options,
+    IAmazonDynamoDB? database = default,
+    CancellationToken cancellationToken = default)
   {
     var dynamoDb = database ?? options.Database;
 
@@ -21,59 +21,59 @@ public static class DynamoDbRoleSetup
     if (options.RolesTableName != Constants.DefaultRolesTableName)
     {
       AWSConfigsDynamoDB.Context.AddAlias(new TableAlias(
-          options.RolesTableName, Constants.DefaultRolesTableName));
+        options.RolesTableName, Constants.DefaultRolesTableName));
     }
 
     return SetupTable(options, dynamoDb, cancellationToken);
   }
 
   private static async Task SetupTable(
-      DynamoDbOptions options,
-      IAmazonDynamoDB database,
-      CancellationToken cancellationToken)
+    DynamoDbOptions options,
+    IAmazonDynamoDB database,
+    CancellationToken cancellationToken)
   {
     var roleGlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
+    {
+      new GlobalSecondaryIndex
+      {
+        IndexName = "NormalizedName-index",
+        KeySchema = new List<KeySchemaElement>
         {
-            new GlobalSecondaryIndex
-            {
-                IndexName = "NormalizedName-index",
-                KeySchema = new List<KeySchemaElement>
-                {
-                    new KeySchemaElement("NormalizedName", KeyType.HASH),
-                },
-                ProvisionedThroughput = options.ProvisionedThroughput,
-                Projection = new Projection
-                {
-                    ProjectionType = ProjectionType.ALL,
-                },
-            },
-        };
+          new KeySchemaElement("NormalizedName", KeyType.HASH),
+        },
+        ProvisionedThroughput = options.ProvisionedThroughput,
+        Projection = new Projection
+        {
+          ProjectionType = ProjectionType.ALL,
+        },
+      },
+    };
 
     var tableNames = await database.ListTablesAsync(cancellationToken);
 
     if (!tableNames.TableNames.Contains(options.RolesTableName))
     {
       await CreateRolesTableAsync(
-          options,
-          database,
-          roleGlobalSecondaryIndexes,
-          cancellationToken);
+        options,
+        database,
+        roleGlobalSecondaryIndexes,
+        cancellationToken);
     }
     else
     {
       await DynamoDbUtils.UpdateSecondaryIndexes(
-          database,
-          options.RolesTableName,
-          roleGlobalSecondaryIndexes,
-          cancellationToken);
+        database,
+        options.RolesTableName,
+        roleGlobalSecondaryIndexes,
+        cancellationToken);
     }
   }
 
   private static async Task CreateRolesTableAsync(
-      DynamoDbOptions options,
-      IAmazonDynamoDB database,
-      List<GlobalSecondaryIndex>? globalSecondaryIndexes,
-      CancellationToken cancellationToken)
+    DynamoDbOptions options,
+    IAmazonDynamoDB database,
+    List<GlobalSecondaryIndex>? globalSecondaryIndexes,
+    CancellationToken cancellationToken)
   {
     var response = await database.CreateTableAsync(new CreateTableRequest
     {
@@ -81,26 +81,26 @@ public static class DynamoDbRoleSetup
       ProvisionedThroughput = options.ProvisionedThroughput,
       BillingMode = options.BillingMode,
       KeySchema = new List<KeySchemaElement>
-            {
-                new KeySchemaElement
-                {
-                    AttributeName = "Id",
-                    KeyType = KeyType.HASH,
-                },
-            },
+      {
+        new KeySchemaElement
+        {
+          AttributeName = "Id",
+          KeyType = KeyType.HASH,
+        },
+      },
       AttributeDefinitions = new List<AttributeDefinition>
-            {
-                new AttributeDefinition
-                {
-                    AttributeName = "Id",
-                    AttributeType = ScalarAttributeType.S,
-                },
-                new AttributeDefinition
-                {
-                    AttributeName = "NormalizedName",
-                    AttributeType = ScalarAttributeType.S,
-                },
-            },
+      {
+        new AttributeDefinition
+        {
+          AttributeName = "Id",
+          AttributeType = ScalarAttributeType.S,
+        },
+        new AttributeDefinition
+        {
+          AttributeName = "NormalizedName",
+          AttributeType = ScalarAttributeType.S,
+        },
+      },
       GlobalSecondaryIndexes = globalSecondaryIndexes,
     }, cancellationToken);
 
@@ -110,8 +110,8 @@ public static class DynamoDbRoleSetup
     }
 
     await DynamoDbUtils.WaitForActiveTableAsync(
-        database,
-        options.RolesTableName,
-        cancellationToken);
+      database,
+      options.RolesTableName,
+      cancellationToken);
   }
 }

@@ -8,7 +8,7 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 public class DynamoDbBuilder
 {
   public DynamoDbBuilder(IServiceCollection services)
-      => Services = services ?? throw new ArgumentNullException(nameof(services));
+    => Services = services ?? throw new ArgumentNullException(nameof(services));
 
   [EditorBrowsable(EditorBrowsableState.Never)]
   public IServiceCollection Services { get; }

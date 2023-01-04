@@ -15,5 +15,5 @@ public class DynamoDbUser : IdentityUser
   public List<string> Roles { get; set; } = new();
   [DynamoDBIgnore]
   public List<IdentityUserToken<string>> Tokens { get; set; }
-      = new List<IdentityUserToken<string>>();
+    = new List<IdentityUserToken<string>>();
 }

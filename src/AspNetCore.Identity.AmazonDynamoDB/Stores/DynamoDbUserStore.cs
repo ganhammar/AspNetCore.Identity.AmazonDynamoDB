@@ -31,8 +31,8 @@ public class DynamoDbUserStore<TUserEntity> :
   private const string RecoveryCodeTokenName = "RecoveryCodes";
 
   public DynamoDbUserStore(
-      IOptionsMonitor<DynamoDbOptions> optionsMonitor,
-      IAmazonDynamoDB? database = default)
+    IOptionsMonitor<DynamoDbOptions> optionsMonitor,
+    IAmazonDynamoDB? database = default)
   {
     ArgumentNullException.ThrowIfNull(optionsMonitor);
 
@@ -147,9 +147,9 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "NormalizedEmail = :email",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":email", normalizedEmail },
-                },
+        {
+          { ":email", normalizedEmail },
+        },
       },
       Limit = 1
     });
@@ -190,9 +190,9 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "NormalizedUserName = :normalizedUserName",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":normalizedUserName", normalizedUserName },
-                },
+        {
+          { ":normalizedUserName", normalizedUserName },
+        },
       },
       Limit = 1
     });
@@ -216,17 +216,17 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "UserId = :userId",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":userId", user.Id },
-                },
+        {
+          { ":userId", user.Id },
+        },
       },
     });
     return await search.GetRemainingAsync(cancellationToken);
   }
 
   private Dictionary<string, List<string>> ToDictionary(List<DynamoDbUserClaim> claims) => claims
-      .GroupBy(x => x.ClaimType)
-      .ToDictionary(x => x.Key!, x => x.Select(y => y.ClaimValue!).ToList());
+    .GroupBy(x => x.ClaimType)
+    .ToDictionary(x => x.Key!, x => x.Select(y => y.ClaimValue!).ToList());
 
   public async Task<IList<Claim>> GetClaimsAsync(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -239,8 +239,8 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     return FlattenClaims(user)
-        .Select(x => new Claim(x.Key, x.Value))
-        .ToList();
+      .Select(x => new Claim(x.Key, x.Value))
+      .ToList();
   }
 
   public Task<string> GetEmailAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -280,16 +280,16 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "UserId = :userId",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":userId", user.Id },
-                },
+        {
+          { ":userId", user.Id },
+        },
       },
     });
     return await search.GetRemainingAsync(cancellationToken);
   }
 
   public async Task<IList<UserLoginInfo>> GetLoginsAsync(
-      TUserEntity user, CancellationToken cancellationToken)
+    TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
@@ -299,9 +299,9 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     return user.Logins
-        .Select(x => new UserLoginInfo(
-            x.LoginProvider, x.ProviderKey, x.ProviderDisplayName))
-        .ToList();
+      .Select(x => new UserLoginInfo(
+        x.LoginProvider, x.ProviderKey, x.ProviderDisplayName))
+      .ToList();
   }
 
   public Task<string> GetNormalizedEmailAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -347,9 +347,9 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "UserId = :userId",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":userId", user.Id },
-                },
+        {
+          { ":userId", user.Id },
+        },
       },
     });
     return await search.GetRemainingAsync(cancellationToken);
@@ -407,10 +407,10 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "ClaimType = :claimType and ClaimValue = :claimValue",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":claimType", claim.Type },
-                    { ":claimValue", claim.Value },
-                },
+        {
+          { ":claimType", claim.Type },
+          { ":claimValue", claim.Value },
+        },
       },
     });
     var userClaims = await search.GetRemainingAsync(cancellationToken);
@@ -437,9 +437,9 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "RoleName = :roleName",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":roleName", roleName },
-                },
+        {
+          { ":roleName", roleName },
+        },
       },
     });
     var userRoles = await search.GetRemainingAsync(cancellationToken);
@@ -481,10 +481,10 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "UserId = :userId and RoleName = :roleName",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":userId", user.Id },
-                    { ":roleName", roleName },
-                },
+        {
+          { ":userId", user.Id },
+          { ":roleName", roleName },
+        },
       },
       Limit = 1,
     });
@@ -531,9 +531,9 @@ public class DynamoDbUserStore<TUserEntity> :
 
     var logins = user.Logins ?? await GetRawLogins(user, cancellationToken);
     user.Logins = logins.Except(logins
-        .Where(x => x.LoginProvider == loginProvider)
-        .Where(x => x.ProviderKey == providerKey))
-        .ToList();
+      .Where(x => x.LoginProvider == loginProvider)
+      .Where(x => x.ProviderKey == providerKey))
+      .ToList();
   }
 
   public async Task ReplaceClaimAsync(TUserEntity user, Claim claim, Claim newClaim, CancellationToken cancellationToken)
@@ -856,10 +856,10 @@ public class DynamoDbUserStore<TUserEntity> :
   }
 
   public Task SetAuthenticatorKeyAsync(TUserEntity user, string key, CancellationToken cancellationToken)
-      => SetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, key, cancellationToken);
+    => SetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, key, cancellationToken);
 
   public Task<string> GetAuthenticatorKeyAsync(TUserEntity user, CancellationToken cancellationToken)
-      => GetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, cancellationToken);
+    => GetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, cancellationToken);
 
   public async Task RemoveTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
   {
@@ -955,9 +955,9 @@ public class DynamoDbUserStore<TUserEntity> :
       {
         ExpressionStatement = "UserId = :userId",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":userId", user.Id },
-                },
+        {
+          { ":userId", user.Id },
+        },
       },
     });
     return await search.GetRemainingAsync(cancellationToken);
@@ -969,14 +969,14 @@ public class DynamoDbUserStore<TUserEntity> :
     {
       var tokens = await GetRawTokens(user, cancellationToken);
       user.Tokens = tokens
-          .Select(x => new IdentityUserToken<string>
-          {
-            LoginProvider = x.LoginProvider,
-            Name = x.Name,
-            UserId = x.UserId!,
-            Value = x.Value,
-          })
-          .ToList();
+        .Select(x => new IdentityUserToken<string>
+        {
+          LoginProvider = x.LoginProvider,
+          Name = x.Name,
+          UserId = x.UserId!,
+          Value = x.Value,
+        })
+        .ToList();
     }
 
     return user.Tokens.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);

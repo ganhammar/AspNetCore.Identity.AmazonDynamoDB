@@ -15,8 +15,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   private IDynamoDBContext _context;
 
   public DynamoDbRoleStore(
-      IOptionsMonitor<DynamoDbOptions> optionsMonitor,
-      IAmazonDynamoDB? database = default)
+    IOptionsMonitor<DynamoDbOptions> optionsMonitor,
+    IAmazonDynamoDB? database = default)
   {
     ArgumentNullException.ThrowIfNull(optionsMonitor);
 
@@ -84,9 +84,9 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
       {
         ExpressionStatement = "NormalizedName = :normalizedRoleName",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-                {
-                    { ":normalizedRoleName", normalizedRoleName },
-                },
+        {
+          { ":normalizedRoleName", normalizedRoleName },
+        },
       },
       Limit = 1
     });
@@ -99,8 +99,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     ArgumentNullException.ThrowIfNull(role);
 
     return Task.FromResult(role.Claims
-        .SelectMany(x => x.Value.Select(y => new Claim(x.Key, y)))
-        .ToList() as IList<Claim>);
+      .SelectMany(x => x.Value.Select(y => new Claim(x.Key, y)))
+      .ToList() as IList<Claim>);
   }
 
   public Task<string> GetNormalizedRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)

@@ -6,7 +6,7 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 internal class DynamoDbUtils
 {
   public static async Task WaitForActiveTableAsync(
-      IAmazonDynamoDB client, string tableName, CancellationToken cancellationToken = default)
+    IAmazonDynamoDB client, string tableName, CancellationToken cancellationToken = default)
   {
     bool active;
     do
@@ -18,7 +18,7 @@ internal class DynamoDbUtils
       }, cancellationToken);
 
       if (!Equals(response.Table.TableStatus, TableStatus.ACTIVE) ||
-          !response.Table.GlobalSecondaryIndexes.TrueForAll(g => Equals(g.IndexStatus, IndexStatus.ACTIVE)))
+        !response.Table.GlobalSecondaryIndexes.TrueForAll(g => Equals(g.IndexStatus, IndexStatus.ACTIVE)))
       {
         active = false;
       }
@@ -33,29 +33,29 @@ internal class DynamoDbUtils
   }
 
   public static async Task UpdateSecondaryIndexes(
-      IAmazonDynamoDB client,
-      string tableName,
-      List<GlobalSecondaryIndex> globalSecondaryIndexes,
-      CancellationToken cancellationToken = default)
+    IAmazonDynamoDB client,
+    string tableName,
+    List<GlobalSecondaryIndex> globalSecondaryIndexes,
+    CancellationToken cancellationToken = default)
   {
     var response = await client.DescribeTableAsync(new DescribeTableRequest { TableName = tableName }, cancellationToken);
     var table = response.Table;
 
     var indexesToAdd = globalSecondaryIndexes
-        .Where(g => !table.GlobalSecondaryIndexes
-            .Exists(gd => gd.IndexName.Equals(g.IndexName)));
+      .Where(g => !table.GlobalSecondaryIndexes
+        .Exists(gd => gd.IndexName.Equals(g.IndexName)));
     var indexUpdates = indexesToAdd
-        .Select(index => new GlobalSecondaryIndexUpdate
+      .Select(index => new GlobalSecondaryIndexUpdate
+      {
+        Create = new CreateGlobalSecondaryIndexAction
         {
-          Create = new CreateGlobalSecondaryIndexAction
-          {
-            IndexName = index.IndexName,
-            KeySchema = index.KeySchema,
-            ProvisionedThroughput = index.ProvisionedThroughput,
-            Projection = index.Projection
-          }
-        })
-        .ToList();
+          IndexName = index.IndexName,
+          KeySchema = index.KeySchema,
+          ProvisionedThroughput = index.ProvisionedThroughput,
+          Projection = index.Projection
+        }
+      })
+      .ToList();
 
     if (indexUpdates.Count > 0)
     {
@@ -64,10 +64,10 @@ internal class DynamoDbUtils
   }
 
   private static async Task UpdateTableAsync(
-      IAmazonDynamoDB client,
-      string tableName,
-      List<GlobalSecondaryIndexUpdate> indexUpdates,
-      CancellationToken cancellationToken)
+    IAmazonDynamoDB client,
+    string tableName,
+    List<GlobalSecondaryIndexUpdate> indexUpdates,
+    CancellationToken cancellationToken)
   {
     await client.UpdateTableAsync(new UpdateTableRequest
     {
