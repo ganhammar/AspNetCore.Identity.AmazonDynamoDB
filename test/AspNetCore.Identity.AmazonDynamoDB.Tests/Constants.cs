@@ -1,4 +1,4 @@
-﻿namespace AspNetCore.Identity.AmazonDynamoDB;
+﻿namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
 internal class Constants
 {

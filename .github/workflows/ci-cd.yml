@@ -18,17 +18,16 @@ jobs:
       - name: Setup .NET Core SDKs
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: |
-            6.0.x
+          dotnet-version: 6.0.x
+
       - name: Restore
-        run: |
-          dotnet restore
+        run: dotnet restore
       - name: Build
-        run: |
-          dotnet build --no-restore
+        run: dotnet build --no-restore
+      - name: Lint
+        run: dotnet format --verify-no-changes --no-restore
       - name: Test
-        run: |
-          dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov
+        run: dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov
       - name: Publish Code Coverage
         uses: codecov/codecov-action@v3
         with:
