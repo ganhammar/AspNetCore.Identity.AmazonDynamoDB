@@ -4,6 +4,10 @@ on:
   - push
   - workflow_dispatch
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build:
 
@@ -52,12 +56,10 @@ jobs:
       - name: Setup .NET Core SDKs
         uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: |
-            6.0.x
+          dotnet-version: 6.0.x
 
       - name: Pack
-        run: |
-          dotnet pack
+        run: dotnet pack
 
       - name: Publish
         run: |
