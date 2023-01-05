@@ -2,11 +2,21 @@
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
-[DynamoDBTable(Constants.DefaultUserRolesTableName)]
+[DynamoDBTable(Constants.DefaultTableName)]
 public class DynamoDbUserRole
 {
   [DynamoDBHashKey]
-  public string? UserId { get; set; }
+  public string PartitionKey
+  {
+    get => $"USER#{UserId}";
+    private set { }
+  }
   [DynamoDBRangeKey]
+  public string SortKey
+  {
+    get => $"ROLE#{RoleName}";
+    private set { }
+  }
+  public string? UserId { get; set; }
   public string? RoleName { get; set; }
 }

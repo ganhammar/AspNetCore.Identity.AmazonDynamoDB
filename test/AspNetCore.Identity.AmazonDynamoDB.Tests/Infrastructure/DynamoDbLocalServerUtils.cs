@@ -1,5 +1,4 @@
 ﻿using Amazon.DynamoDBv2;
-using Amazon.Runtime;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
@@ -13,12 +12,7 @@ internal static class DynamoDbLocalServerUtils
 
     public DisposableDatabase()
     {
-      Client = new AmazonDynamoDBClient(
-          new BasicAWSCredentials("test", "test"),
-          new AmazonDynamoDBConfig
-          {
-            ServiceURL = "http://localhost:8000"
-          });
+      Client = new AmazonDynamoDBClient();
     }
 
     public IAmazonDynamoDB Client { get; }

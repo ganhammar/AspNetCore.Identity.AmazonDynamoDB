@@ -2,13 +2,19 @@
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
-[DynamoDBTable(Constants.DefaultUserClaimsTableName)]
+[DynamoDBTable(Constants.DefaultTableName)]
 public class DynamoDbUserClaim
 {
   [DynamoDBHashKey]
-  public string Id
+  public string PartitionKey
   {
-    get => $"{UserId}#{ClaimType}#{ClaimValue}";
+    get => $"USER#{UserId}";
+    private set { }
+  }
+  [DynamoDBRangeKey]
+  public string SortKey
+  {
+    get => $"CLAIM#{ClaimType}-{ClaimValue}";
     set { }
   }
   public string? ClaimType { get; set; }
