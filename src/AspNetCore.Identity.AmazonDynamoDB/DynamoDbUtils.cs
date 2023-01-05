@@ -23,7 +23,7 @@ internal class DynamoDbUtils
       {
         Console.WriteLine($"Waiting for table {tableName} to become active...");
 
-        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
       }
     } while (!active);
   }

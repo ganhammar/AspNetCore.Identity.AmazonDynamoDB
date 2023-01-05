@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 
@@ -14,7 +13,7 @@ public class DynamoDbUserStoreTests
   {
     // Arrange, Act & Assert
     var exception = Assert.Throws<ArgumentNullException>(() =>
-        new DynamoDbUserStore<DynamoDbUser>(null!));
+      new DynamoDbUserStore<DynamoDbUser>(null!));
 
     Assert.Equal("optionsMonitor", exception.ParamName);
   }
@@ -24,7 +23,7 @@ public class DynamoDbUserStoreTests
   {
     // Arrange, Act & Assert
     var exception = Assert.Throws<ArgumentNullException>(() =>
-        new DynamoDbUserStore<DynamoDbUser>(TestUtils.GetOptions(new())));
+      new DynamoDbUserStore<DynamoDbUser>(TestUtils.GetOptions(new())));
 
     Assert.Equal("Database", exception.ParamName);
   }
@@ -38,14 +37,13 @@ public class DynamoDbUserStoreTests
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options, DatabaseFixture.Client);
 
     // Act
-    await userStore.CreateAsync(new(), CancellationToken.None);
+    var user = new DynamoDbUser();
+    await userStore.CreateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUsersTableName,
-    });
-    Assert.Equal(1, response.Table.ItemCount);
+    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
+    Assert.NotNull(dbUser);
   }
 
   [Fact]
@@ -58,7 +56,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.CreateAsync(default!, CancellationToken.None));
+      await userStore.CreateAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -79,7 +77,7 @@ public class DynamoDbUserStoreTests
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Assert
-    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.Id);
+    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
     Assert.NotNull(databaseUser);
     Assert.Equal(user.UserName, databaseUser.UserName);
   }
@@ -285,11 +283,8 @@ public class DynamoDbUserStoreTests
     await userStore.DeleteAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUsersTableName,
-    });
-    Assert.Equal(0, response.Table.ItemCount);
+    var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
+    Assert.Null(dbUser);
   }
 
   [Fact]
@@ -331,8 +326,8 @@ public class DynamoDbUserStoreTests
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var user = new DynamoDbUser
     {
-      Email = "test@test.se",
-      NormalizedEmail = "TEST@TEST.SE",
+      Email = "test-unique-email@testuniqum.se",
+      NormalizedEmail = "TEST-UNIQUE-EMAIL@TESTUNIQUM.SE",
     };
     await context.SaveAsync(user);
 
@@ -403,7 +398,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.FindByLoginAsync(default!, "test", CancellationToken.None));
+      await userStore.FindByLoginAsync(default!, "test", CancellationToken.None));
     Assert.Equal("loginProvider", exception.ParamName);
   }
 
@@ -417,7 +412,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.FindByLoginAsync("test", default!, CancellationToken.None));
+      await userStore.FindByLoginAsync("test", default!, CancellationToken.None));
     Assert.Equal("providerKey", exception.ParamName);
   }
 
@@ -431,7 +426,7 @@ public class DynamoDbUserStoreTests
 
     // Act
     var user = await userStore.FindByLoginAsync(
-        "test", Guid.NewGuid().ToString(), CancellationToken.None);
+      "test", Guid.NewGuid().ToString(), CancellationToken.None);
 
     // Assert
     Assert.Null(user);
@@ -460,7 +455,7 @@ public class DynamoDbUserStoreTests
 
     // Act
     var foundUser = await userStore.FindByLoginAsync(
-        login.LoginProvider, login.ProviderKey, CancellationToken.None);
+      login.LoginProvider, login.ProviderKey, CancellationToken.None);
 
     // Assert
     Assert.Equal(user.Id, foundUser.Id);
@@ -476,7 +471,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.FindByNameAsync(default!, CancellationToken.None));
+      await userStore.FindByNameAsync(default!, CancellationToken.None));
     Assert.Equal("normalizedUserName", exception.ParamName);
   }
 
@@ -505,8 +500,8 @@ public class DynamoDbUserStoreTests
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var user = new DynamoDbUser
     {
-      UserName = "test",
-      NormalizedUserName = "TEST",
+      UserName = "test-unique-name",
+      NormalizedUserName = "TEST-UNIQUE-NAME",
     };
     await context.SaveAsync(user);
 
@@ -597,7 +592,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetEmailConfirmedAsync(default!, CancellationToken.None));
+      await userStore.GetEmailConfirmedAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -632,7 +627,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetLockoutEnabledAsync(default!, CancellationToken.None));
+      await userStore.GetLockoutEnabledAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -667,7 +662,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetLockoutEndDateAsync(default!, CancellationToken.None));
+      await userStore.GetLockoutEndDateAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -702,7 +697,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetNormalizedEmailAsync(default!, CancellationToken.None));
+      await userStore.GetNormalizedEmailAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -737,7 +732,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetNormalizedUserNameAsync(default!, CancellationToken.None));
+      await userStore.GetNormalizedUserNameAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -772,7 +767,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetLoginsAsync(default!, CancellationToken.None));
+      await userStore.GetLoginsAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -806,11 +801,6 @@ public class DynamoDbUserStoreTests
     var logins = await userStore.GetLoginsAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserLoginsTableName,
-    });
-    Assert.Equal(loginCount, response.Table.ItemCount);
     Assert.Equal(loginCount, logins.Count);
   }
 
@@ -824,7 +814,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetRolesAsync(default!, CancellationToken.None));
+      await userStore.GetRolesAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -857,11 +847,6 @@ public class DynamoDbUserStoreTests
     var logins = await userStore.GetRolesAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserRolesTableName,
-    });
-    Assert.Equal(loginCount, response.Table.ItemCount);
     Assert.Equal(loginCount, logins.Count);
   }
 
@@ -875,7 +860,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetPasswordHashAsync(default!, CancellationToken.None));
+      await userStore.GetPasswordHashAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -910,7 +895,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetPhoneNumberAsync(default!, CancellationToken.None));
+      await userStore.GetPhoneNumberAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -945,7 +930,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetPhoneNumberConfirmedAsync(default!, CancellationToken.None));
+      await userStore.GetPhoneNumberConfirmedAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -980,7 +965,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetSecurityStampAsync(default!, CancellationToken.None));
+      await userStore.GetSecurityStampAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1015,7 +1000,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetTwoFactorEnabledAsync(default!, CancellationToken.None));
+      await userStore.GetTwoFactorEnabledAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1050,7 +1035,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetUserIdAsync(default!, CancellationToken.None));
+      await userStore.GetUserIdAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1085,7 +1070,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetUserNameAsync(default!, CancellationToken.None));
+      await userStore.GetUserNameAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1120,7 +1105,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.HasPasswordAsync(default!, CancellationToken.None));
+      await userStore.HasPasswordAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1155,7 +1140,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.IncrementAccessFailedCountAsync(default!, CancellationToken.None));
+      await userStore.IncrementAccessFailedCountAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1190,7 +1175,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.IsInRoleAsync(default!, "test", CancellationToken.None));
+      await userStore.IsInRoleAsync(default!, "test", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1230,7 +1215,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetEmailAsync(default!, "test@test.se", CancellationToken.None));
+      await userStore.SetEmailAsync(default!, "test@test.se", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1266,7 +1251,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetEmailConfirmedAsync(default!, true, CancellationToken.None));
+      await userStore.SetEmailConfirmedAsync(default!, true, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1287,7 +1272,7 @@ public class DynamoDbUserStoreTests
     // Act
     var emailConfirmed = true;
     await userStore.SetEmailConfirmedAsync(
-        user, emailConfirmed, CancellationToken.None);
+      user, emailConfirmed, CancellationToken.None);
 
     // Assert
     Assert.Equal(emailConfirmed, user.EmailConfirmed);
@@ -1303,7 +1288,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetLockoutEnabledAsync(default!, true, CancellationToken.None));
+      await userStore.SetLockoutEnabledAsync(default!, true, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1324,7 +1309,7 @@ public class DynamoDbUserStoreTests
     // Act
     var emailConfirmed = true;
     await userStore.SetLockoutEnabledAsync(
-        user, emailConfirmed, CancellationToken.None);
+      user, emailConfirmed, CancellationToken.None);
 
     // Assert
     Assert.Equal(emailConfirmed, user.LockoutEnabled);
@@ -1340,7 +1325,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetLockoutEndDateAsync(default!, DateTimeOffset.Now, CancellationToken.None));
+      await userStore.SetLockoutEndDateAsync(default!, DateTimeOffset.Now, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1361,7 +1346,7 @@ public class DynamoDbUserStoreTests
     // Act
     var lockoutEnd = DateTimeOffset.Now;
     await userStore.SetLockoutEndDateAsync(
-        user, lockoutEnd, CancellationToken.None);
+      user, lockoutEnd, CancellationToken.None);
 
     // Assert
     Assert.Equal(lockoutEnd.UtcDateTime, user.LockoutEnd);
@@ -1377,7 +1362,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetNormalizedEmailAsync(default!, "TEST@TEST.SE", CancellationToken.None));
+      await userStore.SetNormalizedEmailAsync(default!, "TEST@TEST.SE", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1398,7 +1383,7 @@ public class DynamoDbUserStoreTests
     // Act
     var normalizedEmail = "TESTING@TEST.SE";
     await userStore.SetNormalizedEmailAsync(
-        user, normalizedEmail, CancellationToken.None);
+      user, normalizedEmail, CancellationToken.None);
 
     // Assert
     Assert.Equal(normalizedEmail, user.NormalizedEmail);
@@ -1414,7 +1399,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetNormalizedUserNameAsync(default!, "TEST", CancellationToken.None));
+      await userStore.SetNormalizedUserNameAsync(default!, "TEST", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1435,7 +1420,7 @@ public class DynamoDbUserStoreTests
     // Act
     var normalizedUserName = "TESTING";
     await userStore.SetNormalizedUserNameAsync(
-        user, normalizedUserName, CancellationToken.None);
+      user, normalizedUserName, CancellationToken.None);
 
     // Assert
     Assert.Equal(normalizedUserName, user.NormalizedUserName);
@@ -1451,7 +1436,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetPasswordHashAsync(default!, "Secret", CancellationToken.None));
+      await userStore.SetPasswordHashAsync(default!, "Secret", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1472,7 +1457,7 @@ public class DynamoDbUserStoreTests
     // Act
     var passwordHash = "Even-More-Secret";
     await userStore.SetPasswordHashAsync(
-        user, passwordHash, CancellationToken.None);
+      user, passwordHash, CancellationToken.None);
 
     // Assert
     Assert.Equal(passwordHash, user.PasswordHash);
@@ -1488,7 +1473,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetPhoneNumberAsync(default!, "1111111", CancellationToken.None));
+      await userStore.SetPhoneNumberAsync(default!, "1111111", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1509,7 +1494,7 @@ public class DynamoDbUserStoreTests
     // Act
     var phoneNumber = "2222222";
     await userStore.SetPhoneNumberAsync(
-        user, phoneNumber, CancellationToken.None);
+      user, phoneNumber, CancellationToken.None);
 
     // Assert
     Assert.Equal(phoneNumber, user.PhoneNumber);
@@ -1525,7 +1510,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetPhoneNumberConfirmedAsync(default!, true, CancellationToken.None));
+      await userStore.SetPhoneNumberConfirmedAsync(default!, true, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1546,7 +1531,7 @@ public class DynamoDbUserStoreTests
     // Act
     var phoneNumberConfirmed = true;
     await userStore.SetPhoneNumberConfirmedAsync(
-        user, phoneNumberConfirmed, CancellationToken.None);
+      user, phoneNumberConfirmed, CancellationToken.None);
 
     // Assert
     Assert.Equal(phoneNumberConfirmed, user.PhoneNumberConfirmed);
@@ -1562,7 +1547,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetTwoFactorEnabledAsync(default!, true, CancellationToken.None));
+      await userStore.SetTwoFactorEnabledAsync(default!, true, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1583,7 +1568,7 @@ public class DynamoDbUserStoreTests
     // Act
     var phoneNumberConfirmed = true;
     await userStore.SetTwoFactorEnabledAsync(
-        user, phoneNumberConfirmed, CancellationToken.None);
+      user, phoneNumberConfirmed, CancellationToken.None);
 
     // Assert
     Assert.Equal(phoneNumberConfirmed, user.TwoFactorEnabled);
@@ -1599,7 +1584,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetSecurityStampAsync(default!, "some-string", CancellationToken.None));
+      await userStore.SetSecurityStampAsync(default!, "some-string", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1620,7 +1605,7 @@ public class DynamoDbUserStoreTests
     // Act
     var securityStamp = "some-other-string";
     await userStore.SetSecurityStampAsync(
-        user, securityStamp, CancellationToken.None);
+      user, securityStamp, CancellationToken.None);
 
     // Assert
     Assert.Equal(securityStamp, user.SecurityStamp);
@@ -1636,7 +1621,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.SetUserNameAsync(default!, "some-user", CancellationToken.None));
+      await userStore.SetUserNameAsync(default!, "some-user", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1657,7 +1642,7 @@ public class DynamoDbUserStoreTests
     // Act
     var userName = "some-other-user";
     await userStore.SetUserNameAsync(
-        user, userName, CancellationToken.None);
+      user, userName, CancellationToken.None);
 
     // Assert
     Assert.Equal(userName, user.UserName);
@@ -1673,7 +1658,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetClaimsAsync(default!, CancellationToken.None));
+      await userStore.GetClaimsAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1720,7 +1705,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetUsersInRoleAsync(default!, CancellationToken.None));
+      await userStore.GetUsersInRoleAsync(default!, CancellationToken.None));
     Assert.Equal("roleName", exception.ParamName);
   }
 
@@ -1767,7 +1752,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.ResetAccessFailedCountAsync(default!, CancellationToken.None));
+      await userStore.ResetAccessFailedCountAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1802,7 +1787,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveClaimsAsync(default!, new List<Claim>(), CancellationToken.None));
+      await userStore.RemoveClaimsAsync(default!, new List<Claim>(), CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1816,7 +1801,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveClaimsAsync(new(), default!, CancellationToken.None));
+      await userStore.RemoveClaimsAsync(new(), default!, CancellationToken.None));
     Assert.Equal("claims", exception.ParamName);
   }
 
@@ -1863,7 +1848,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveFromRoleAsync(default!, "test", CancellationToken.None));
+      await userStore.RemoveFromRoleAsync(default!, "test", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1877,7 +1862,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveFromRoleAsync(new(), default!, CancellationToken.None));
+      await userStore.RemoveFromRoleAsync(new(), default!, CancellationToken.None));
     Assert.Equal("roleName", exception.ParamName);
   }
 
@@ -1916,7 +1901,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveLoginAsync(default!, "test", "test", CancellationToken.None));
+      await userStore.RemoveLoginAsync(default!, "test", "test", CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -1930,7 +1915,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveLoginAsync(new(), default!, "test", CancellationToken.None));
+      await userStore.RemoveLoginAsync(new(), default!, "test", CancellationToken.None));
     Assert.Equal("loginProvider", exception.ParamName);
   }
 
@@ -1944,7 +1929,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveLoginAsync(new(), "test", default!, CancellationToken.None));
+      await userStore.RemoveLoginAsync(new(), "test", default!, CancellationToken.None));
     Assert.Equal("providerKey", exception.ParamName);
   }
 
@@ -1985,7 +1970,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetUsersForClaimAsync(default!, CancellationToken.None));
+      await userStore.GetUsersForClaimAsync(default!, CancellationToken.None));
     Assert.Equal("claim", exception.ParamName);
   }
 
@@ -2026,7 +2011,7 @@ public class DynamoDbUserStoreTests
   [InlineData(true, false, true, "claim")]
   [InlineData(true, true, false, "newClaim")]
   public async Task Should_ThrowException_When_ParameterIsNull(
-      bool userHasValue, bool currentClaimHasValue, bool newClaimHasValue, string expectedParamName)
+    bool userHasValue, bool currentClaimHasValue, bool newClaimHasValue, string expectedParamName)
   {
     // Arrange
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
@@ -2035,11 +2020,11 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.ReplaceClaimAsync(
-            userHasValue ? new() : default!,
-            currentClaimHasValue ? new("t", "t") : default!,
-            newClaimHasValue ? new("t", "t") : default!,
-            CancellationToken.None));
+      await userStore.ReplaceClaimAsync(
+        userHasValue ? new() : default!,
+        currentClaimHasValue ? new("t", "t") : default!,
+        newClaimHasValue ? new("t", "t") : default!,
+        CancellationToken.None));
     Assert.Equal(expectedParamName, exception.ParamName);
   }
 
@@ -2083,7 +2068,7 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.UpdateAsync(default!, CancellationToken.None));
+      await userStore.UpdateAsync(default!, CancellationToken.None));
     Assert.Equal("user", exception.ParamName);
   }
 
@@ -2138,7 +2123,7 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.Id);
+    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
     Assert.NotNull(databaseUser);
     Assert.Equal(databaseUser.UserName, user.UserName);
   }
@@ -2157,15 +2142,12 @@ public class DynamoDbUserStoreTests
 
     // Act
     await userStore.RemoveClaimsAsync(
-        user, new List<Claim> { new("test", "test") }, CancellationToken.None);
+      user, new List<Claim> { new("test", "test") }, CancellationToken.None);
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserClaimsTableName,
-    });
-    Assert.Equal(0, response.Table.ItemCount);
+    var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
+    Assert.Empty(claims);
   }
 
   [Fact]
@@ -2184,11 +2166,8 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserClaimsTableName,
-    });
-    Assert.Equal(1, response.Table.ItemCount);
+    var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
+    Assert.Single(claims);
   }
 
   [Fact]
@@ -2205,15 +2184,12 @@ public class DynamoDbUserStoreTests
 
     // Act
     await userStore.RemoveFromRoleAsync(
-        user, "test", CancellationToken.None);
+      user, "test", CancellationToken.None);
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserRolesTableName,
-    });
-    Assert.Equal(0, response.Table.ItemCount);
+    var roles = await userStore.GetRolesAsync(user, CancellationToken.None);
+    Assert.Empty(roles);
   }
 
   [Fact]
@@ -2232,11 +2208,8 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserRolesTableName,
-    });
-    Assert.Equal(1, response.Table.ItemCount);
+    var roles = await userStore.GetRolesAsync(user, CancellationToken.None);
+    Assert.Single(roles);
   }
 
   [Fact]
@@ -2257,15 +2230,12 @@ public class DynamoDbUserStoreTests
 
     // Act
     await userStore.RemoveLoginAsync(
-        user, "test", "test", CancellationToken.None);
+      user, "test", "test", CancellationToken.None);
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserLoginsTableName,
-    });
-    Assert.Equal(0, response.Table.ItemCount);
+    var logins = await userStore.GetLoginsAsync(user, CancellationToken.None);
+    Assert.Empty(logins);
   }
 
   [Fact]
@@ -2288,11 +2258,8 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserLoginsTableName,
-    });
-    Assert.Equal(1, response.Table.ItemCount);
+    var logins = await userStore.GetLoginsAsync(user, CancellationToken.None);
+    Assert.Single(logins);
   }
 
   [Fact]
@@ -2310,11 +2277,8 @@ public class DynamoDbUserStoreTests
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserClaimsTableName,
-    });
-    Assert.Equal(2, response.Table.ItemCount);
+    var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
+    Assert.Equal(2, claims.Count);
   }
 
   [Fact]
@@ -2325,28 +2289,29 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var loginProvider = "TestProvider";
+    var name = "MyTestThing";
+    var value = "ItsAsEasyAs123";
     var user = new DynamoDbUser
     {
       Tokens = new List<IdentityUserToken<string>>
-                {
-                    new IdentityUserToken<string>
-                    {
-                        LoginProvider = "TestProvider",
-                        Name = "MyTestThing",
-                        Value = "ItsAsEasyAs123",
-                    },
-                },
+      {
+        new IdentityUserToken<string>
+        {
+          LoginProvider = loginProvider,
+          Name = name,
+          Value = value,
+        },
+      },
     };
 
     // Act
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserTokensTableName,
-    });
-    Assert.Equal(1, response.Table.ItemCount);
+    var token = await userStore.GetTokenAsync(
+      user, loginProvider, name, CancellationToken.None);
+    Assert.Equal(value, token);
   }
 
   [Fact]
@@ -2362,14 +2327,14 @@ public class DynamoDbUserStoreTests
     var user = new DynamoDbUser
     {
       Tokens = new List<IdentityUserToken<string>>
-                {
-                    new IdentityUserToken<string>
-                    {
-                        LoginProvider = loginProvider,
-                        Name = name,
-                        Value = "ItsAsEasyAs123",
-                    },
-                },
+      {
+        new IdentityUserToken<string>
+        {
+          LoginProvider = loginProvider,
+          Name = name,
+          Value = "ItsAsEasyAs123",
+        },
+      },
     };
     await userStore.CreateAsync(user, CancellationToken.None);
 
@@ -2378,11 +2343,9 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserTokensTableName,
-    });
-    Assert.Equal(0, response.Table.ItemCount);
+    var tokens = await userStore.GetTokenAsync(
+      user, loginProvider, name, CancellationToken.None);
+    Assert.Empty(tokens);
   }
 
   [Fact]
@@ -2393,30 +2356,35 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var originalLoginProvider = "TestProvider";
+    var originalName = "MyTestThing";
     var user = new DynamoDbUser
     {
       Tokens = new List<IdentityUserToken<string>>
-                {
-                    new IdentityUserToken<string>
-                    {
-                        LoginProvider = "TestProvider",
-                        Name = "MyTestThing",
-                        Value = "ItsAsEasyAs123",
-                    },
-                },
+      {
+        new IdentityUserToken<string>
+        {
+          LoginProvider = originalLoginProvider,
+          Name = originalName,
+          Value = "ItsAsEasyAs123",
+        },
+      },
     };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
-    await userStore.SetTokenAsync(user, "NewTestProvider", "NewTestThing", "ItsNotAsEasyAs123", CancellationToken.None);
+    var newLoginProvider = "NewTestProvider";
+    var newName = "NewTestThing";
+    await userStore.SetTokenAsync(user, newLoginProvider, newName, "ItsNotAsEasyAs123", CancellationToken.None);
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserTokensTableName,
-    });
-    Assert.Equal(2, response.Table.ItemCount);
+    var originalToken = await userStore.GetTokenAsync(
+      user, originalLoginProvider, originalName, CancellationToken.None);
+    var newToken = await userStore.GetTokenAsync(
+      user, newLoginProvider, newName, CancellationToken.None);
+    Assert.NotNull(originalToken);
+    Assert.NotNull(newToken);
   }
 
   [Fact]
@@ -2432,14 +2400,14 @@ public class DynamoDbUserStoreTests
     var user = new DynamoDbUser
     {
       Tokens = new List<IdentityUserToken<string>>
-                {
-                    new IdentityUserToken<string>
-                    {
-                        LoginProvider = loginProvider,
-                        Name = name,
-                        Value = "ItsAsEasyAs123",
-                    },
-                },
+      {
+        new IdentityUserToken<string>
+        {
+          LoginProvider = loginProvider,
+          Name = name,
+          Value = "ItsAsEasyAs123",
+        },
+      },
     };
     await userStore.CreateAsync(user, CancellationToken.None);
 
@@ -2465,15 +2433,13 @@ public class DynamoDbUserStoreTests
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
-    await userStore.SetAuthenticatorKeyAsync(user, "Test", CancellationToken.None);
+    var key = "Test";
+    await userStore.SetAuthenticatorKeyAsync(user, key, CancellationToken.None);
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var response = await DatabaseFixture.Client.DescribeTableAsync(new DescribeTableRequest
-    {
-      TableName = Constants.DefaultUserTokensTableName,
-    });
-    Assert.Equal(1, response.Table.ItemCount);
+    var token = await userStore.GetAuthenticatorKeyAsync(user, CancellationToken.None);
+    Assert.Equal(key, token);
   }
 
   [Fact]
@@ -2501,7 +2467,7 @@ public class DynamoDbUserStoreTests
   [InlineData(true, false, true, "loginProvider")]
   [InlineData(true, true, false, "name")]
   public async Task Should_ThrowException_When_GetTokenParameterIsNull(
-      bool userHasValue, bool loginProviderHasValue, bool nameHasValue, string expectedParamName)
+    bool userHasValue, bool loginProviderHasValue, bool nameHasValue, string expectedParamName)
   {
     // Arrange
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
@@ -2510,11 +2476,11 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.GetTokenAsync(
-            userHasValue ? new() : default!,
-            loginProviderHasValue ? "test" : default!,
-            nameHasValue ? "test" : default!,
-            CancellationToken.None));
+      await userStore.GetTokenAsync(
+        userHasValue ? new() : default!,
+        loginProviderHasValue ? "test" : default!,
+        nameHasValue ? "test" : default!,
+        CancellationToken.None));
     Assert.Equal(expectedParamName, exception.ParamName);
   }
 
@@ -2523,7 +2489,7 @@ public class DynamoDbUserStoreTests
   [InlineData(true, false, true, "loginProvider")]
   [InlineData(true, true, false, "name")]
   public async Task Should_ThrowException_When_RemoveTokenParameterIsNull(
-      bool userHasValue, bool loginProviderHasValue, bool nameHasValue, string expectedParamName)
+    bool userHasValue, bool loginProviderHasValue, bool nameHasValue, string expectedParamName)
   {
     // Arrange
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
@@ -2532,11 +2498,11 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RemoveTokenAsync(
-            userHasValue ? new() : default!,
-            loginProviderHasValue ? "test" : default!,
-            nameHasValue ? "test" : default!,
-            CancellationToken.None));
+      await userStore.RemoveTokenAsync(
+        userHasValue ? new() : default!,
+        loginProviderHasValue ? "test" : default!,
+        nameHasValue ? "test" : default!,
+        CancellationToken.None));
     Assert.Equal(expectedParamName, exception.ParamName);
   }
 
@@ -2544,7 +2510,7 @@ public class DynamoDbUserStoreTests
   [InlineData(false, true, "user")]
   [InlineData(true, false, "code")]
   public async Task Should_ThrowException_When_RedeemCodeParameterIsNull(
-      bool userHasValue, bool code, string expectedParamName)
+    bool userHasValue, bool code, string expectedParamName)
   {
     // Arrange
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
@@ -2553,10 +2519,10 @@ public class DynamoDbUserStoreTests
 
     // Act & Assert
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.RedeemCodeAsync(
-            userHasValue ? new() : default!,
-            code ? "test" : default!,
-            CancellationToken.None));
+      await userStore.RedeemCodeAsync(
+        userHasValue ? new() : default!,
+        code ? "test" : default!,
+        CancellationToken.None));
     Assert.Equal(expectedParamName, exception.ParamName);
   }
 
@@ -2607,7 +2573,7 @@ public class DynamoDbUserStoreTests
 
     // Act
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.ReplaceCodesAsync(default!, new[] { "1" }, CancellationToken.None));
+      await userStore.ReplaceCodesAsync(default!, new[] { "1" }, CancellationToken.None));
 
     Assert.Equal("user", exception.ParamName);
   }
@@ -2622,7 +2588,7 @@ public class DynamoDbUserStoreTests
 
     // Act
     var exception = await Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        await userStore.CountCodesAsync(default!, CancellationToken.None));
+      await userStore.CountCodesAsync(default!, CancellationToken.None));
 
     Assert.Equal("user", exception.ParamName);
   }

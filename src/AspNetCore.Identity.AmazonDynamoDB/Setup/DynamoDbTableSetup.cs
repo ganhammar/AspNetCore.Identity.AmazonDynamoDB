@@ -116,6 +116,20 @@ public static class DynamoDbTableSetup
             ProjectionType = ProjectionType.ALL,
           },
         },
+        new()
+        {
+          IndexName = "LoginProvider-ProviderKey-index",
+          KeySchema = new List<KeySchemaElement>
+          {
+            new KeySchemaElement("LoginProvider", KeyType.HASH),
+            new KeySchemaElement("ProviderKey", KeyType.RANGE),
+          },
+          ProvisionedThroughput = provisionedThroughput,
+          Projection = new Projection
+          {
+            ProjectionType = ProjectionType.ALL,
+          },
+        },
         // Role Indexes
         new()
         {
@@ -147,6 +161,8 @@ public static class DynamoDbTableSetup
         new("ClaimType", ScalarAttributeType.S),
         new("ClaimValue", ScalarAttributeType.S),
         new("RoleName", ScalarAttributeType.S),
+        new("LoginProvider", ScalarAttributeType.S),
+        new("ProviderKey", ScalarAttributeType.S),
         // Role Attributes
         new("NormalizedName", ScalarAttributeType.S),
       },
