@@ -73,19 +73,16 @@ public class DynamoDbBuilderTests
   [Fact]
   public void Should_SetDatabase_When_CallingUseDatabase()
   {
-    using (var database = DynamoDbLocalServerUtils.CreateDatabase())
-    {
-      // Arrange
-      var services = new ServiceCollection();
+    // Arrange
+    var services = new ServiceCollection();
 
-      // Act
-      CreateBuilder(services).UseDatabase(database.Client);
+    // Act
+    CreateBuilder(services).UseDatabase(DatabaseFixture.Client);
 
-      // Assert
-      var serviceProvider = services.BuildServiceProvider();
-      var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-      Assert.Equal(database.Client, options.Database);
-    }
+    // Assert
+    var serviceProvider = services.BuildServiceProvider();
+    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
+    Assert.Equal(DatabaseFixture.Client, options.Database);
   }
 
   [Fact]
