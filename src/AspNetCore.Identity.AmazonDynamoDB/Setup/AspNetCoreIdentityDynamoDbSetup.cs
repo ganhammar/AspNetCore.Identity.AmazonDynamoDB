@@ -16,8 +16,8 @@ public static class AspNetCoreIdentityDynamoDbSetup
   }
 
   public static async Task EnsureInitializedAsync(
-      IServiceProvider services,
-      CancellationToken cancellationToken = default)
+    IServiceProvider services,
+    CancellationToken cancellationToken = default)
   {
     var database = services.GetService<IAmazonDynamoDB>();
 
@@ -28,25 +28,19 @@ public static class AspNetCoreIdentityDynamoDbSetup
   }
 
   public static async Task EnsureInitializedAsync(
-      IOptionsMonitor<DynamoDbOptions> options,
-      IAmazonDynamoDB? database = default,
-      CancellationToken cancellationToken = default)
+    IOptionsMonitor<DynamoDbOptions> options,
+    IAmazonDynamoDB? database = default,
+    CancellationToken cancellationToken = default)
   {
-    var promises = new[]
-    {
-      DynamoDbUserSetup.EnsureInitializedAsync(
-        options.CurrentValue, database),
-      DynamoDbRoleSetup.EnsureInitializedAsync(
-        options.CurrentValue, database),
-    };
-
-    await Task.WhenAll(promises);
+    await DynamoDbTableSetup.EnsureInitializedAsync(
+      options.CurrentValue, database);
   }
 
   public static void EnsureInitialized(
     IOptionsMonitor<DynamoDbOptions> options,
     IAmazonDynamoDB? database = default)
   {
-    EnsureInitializedAsync(options, database).GetAwaiter().GetResult();
+    EnsureInitializedAsync(options, database)
+      .GetAwaiter().GetResult();
   }
 }

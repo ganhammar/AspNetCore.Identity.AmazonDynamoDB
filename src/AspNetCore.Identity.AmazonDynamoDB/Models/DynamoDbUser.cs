@@ -3,9 +3,21 @@ using Microsoft.AspNetCore.Identity;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
-[DynamoDBTable(Constants.DefaultUsersTableName)]
+[DynamoDBTable(Constants.DefaultTableName)]
 public class DynamoDbUser : IdentityUser
 {
+  [DynamoDBHashKey]
+  public string PartitionKey
+  {
+    get => $"USER#{Id}";
+    private set { }
+  }
+  [DynamoDBRangeKey]
+  public string? SortKey
+  {
+    get => $"#USER#{Id}";
+    private set { }
+  }
   public new DateTime? LockoutEnd { get; set; }
   [DynamoDBIgnore]
   public Dictionary<string, List<string>> Claims { get; set; } = new();

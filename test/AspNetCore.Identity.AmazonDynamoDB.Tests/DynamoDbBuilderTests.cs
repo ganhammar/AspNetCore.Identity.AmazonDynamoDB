@@ -32,165 +32,30 @@ public class DynamoDbBuilderTests
   }
 
   [Fact]
-  public void Should_ThrowException_When_SetRolesTableNameAndNameIsNull()
+  public void Should_ThrowException_When_SetDefaultTableNameAndNameIsNull()
   {
     // Arrange
     var services = new ServiceCollection();
 
     // Act & Assert
     var exception = Assert.Throws<ArgumentNullException>(() =>
-        CreateBuilder(services).SetRolesTableName(null!));
+        CreateBuilder(services).SetDefaultTableName(null!));
     Assert.Equal("name", exception.ParamName);
   }
 
   [Fact]
-  public void Should_SetTableName_When_CallingSetRolesTableName()
+  public void Should_SetTableName_When_CallingSetDefaultTableName()
   {
     // Arrange
     var services = new ServiceCollection();
 
     // Act
-    CreateBuilder(services).SetRolesTableName("test");
+    CreateBuilder(services).SetDefaultTableName("test");
 
     // Assert
     var serviceProvider = services.BuildServiceProvider();
     var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-    Assert.Equal("test", options.RolesTableName);
-  }
-
-  [Fact]
-  public void Should_ThrowException_When_SetUserClaimsTableNameAndNameIsNull()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act & Assert
-    var exception = Assert.Throws<ArgumentNullException>(() =>
-        CreateBuilder(services).SetUserClaimsTableName(null!));
-    Assert.Equal("name", exception.ParamName);
-  }
-
-  [Fact]
-  public void Should_SetTableName_When_CallingSetUserClaimsTableName()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act
-    CreateBuilder(services).SetUserClaimsTableName("test");
-
-    // Assert
-    var serviceProvider = services.BuildServiceProvider();
-    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-    Assert.Equal("test", options.UserClaimsTableName);
-  }
-
-  [Fact]
-  public void Should_ThrowException_When_SetUserTokensTableNameAndNameIsNull()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act & Assert
-    var exception = Assert.Throws<ArgumentNullException>(() =>
-        CreateBuilder(services).SetUserTokensTableName(null!));
-    Assert.Equal("name", exception.ParamName);
-  }
-
-  [Fact]
-  public void Should_SetTableName_When_CallingSetUserTokensTableName()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act
-    CreateBuilder(services).SetUserTokensTableName("test");
-
-    // Assert
-    var serviceProvider = services.BuildServiceProvider();
-    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-    Assert.Equal("test", options.UserTokensTableName);
-  }
-
-  [Fact]
-  public void Should_ThrowException_When_SetUserLoginsTableNameAndNameIsNull()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act & Assert
-    var exception = Assert.Throws<ArgumentNullException>(() =>
-        CreateBuilder(services).SetUserLoginsTableName(null!));
-    Assert.Equal("name", exception.ParamName);
-  }
-
-  [Fact]
-  public void Should_SetTableName_When_CallingSetUserLoginsTableName()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act
-    CreateBuilder(services).SetUserLoginsTableName("test");
-
-    // Assert
-    var serviceProvider = services.BuildServiceProvider();
-    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-    Assert.Equal("test", options.UserLoginsTableName);
-  }
-
-  [Fact]
-  public void Should_ThrowException_When_SetUserRolesTableNameAndNameIsNull()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act & Assert
-    var exception = Assert.Throws<ArgumentNullException>(() =>
-        CreateBuilder(services).SetUserRolesTableName(null!));
-    Assert.Equal("name", exception.ParamName);
-  }
-
-  [Fact]
-  public void Should_SetTableName_When_CallingSetUserRolesTableName()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act
-    CreateBuilder(services).SetUserRolesTableName("test");
-
-    // Assert
-    var serviceProvider = services.BuildServiceProvider();
-    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-    Assert.Equal("test", options.UserRolesTableName);
-  }
-
-  [Fact]
-  public void Should_ThrowException_When_SetUsersTableNameAndNameIsNull()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act & Assert
-    var exception = Assert.Throws<ArgumentNullException>(() =>
-        CreateBuilder(services).SetUsersTableName(null!));
-    Assert.Equal("name", exception.ParamName);
-  }
-
-  [Fact]
-  public void Should_SetTableName_When_CallingSetUsersTableName()
-  {
-    // Arrange
-    var services = new ServiceCollection();
-
-    // Act
-    CreateBuilder(services).SetUsersTableName("test");
-
-    // Assert
-    var serviceProvider = services.BuildServiceProvider();
-    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-    Assert.Equal("test", options.UsersTableName);
+    Assert.Equal("test", options.DefaultTableName);
   }
 
   [Fact]
@@ -208,19 +73,16 @@ public class DynamoDbBuilderTests
   [Fact]
   public void Should_SetDatabase_When_CallingUseDatabase()
   {
-    using (var database = DynamoDbLocalServerUtils.CreateDatabase())
-    {
-      // Arrange
-      var services = new ServiceCollection();
+    // Arrange
+    var services = new ServiceCollection();
 
-      // Act
-      CreateBuilder(services).UseDatabase(database.Client);
+    // Act
+    CreateBuilder(services).UseDatabase(DatabaseFixture.Client);
 
-      // Assert
-      var serviceProvider = services.BuildServiceProvider();
-      var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
-      Assert.Equal(database.Client, options.Database);
-    }
+    // Assert
+    var serviceProvider = services.BuildServiceProvider();
+    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
+    Assert.Equal(DatabaseFixture.Client, options.Database);
   }
 
   [Fact]

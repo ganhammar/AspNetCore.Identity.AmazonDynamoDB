@@ -13,6 +13,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 {
   private IAmazonDynamoDB _client;
   private IDynamoDBContext _context;
+  private string _tableName;
 
   public DynamoDbRoleStore(
     IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -29,6 +30,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     _client = database ?? options.Database!;
     _context = new DynamoDBContext(_client);
+    _tableName = options.DefaultTableName ?? Constants.DefaultTableName;
   }
 
   public Task AddClaimAsync(TRoleEntity role, Claim claim, CancellationToken cancellationToken = default)
@@ -70,7 +72,11 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(roleId);
 
-    return await _context.LoadAsync<TRoleEntity>(roleId, cancellationToken);
+    var role = new DynamoDbRole
+    {
+      Id = roleId,
+    };
+    return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, cancellationToken);
   }
 
   public async Task<TRoleEntity> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
@@ -167,7 +173,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     ArgumentNullException.ThrowIfNull(role);
 
     // Ensure no one else is updating
-    var databaseApplication = await _context.LoadAsync<TRoleEntity>(role.Id, cancellationToken);
+    var databaseApplication = await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, cancellationToken);
     if (databaseApplication == default || databaseApplication.ConcurrencyStamp != role.ConcurrencyStamp)
     {
       return IdentityResult.Failed(new IdentityError

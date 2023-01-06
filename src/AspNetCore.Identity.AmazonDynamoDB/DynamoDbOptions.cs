@@ -5,12 +5,7 @@ namespace AspNetCore.Identity.AmazonDynamoDB;
 
 public class DynamoDbOptions
 {
-  public string UsersTableName { get; set; } = Constants.DefaultUsersTableName;
-  public string UserClaimsTableName { get; set; } = Constants.DefaultUserClaimsTableName;
-  public string UserLoginsTableName { get; set; } = Constants.DefaultUserLoginsTableName;
-  public string UserRolesTableName { get; set; } = Constants.DefaultUserRolesTableName;
-  public string UserTokensTableName { get; set; } = Constants.DefaultUserTokensTableName;
-  public string RolesTableName { get; set; } = Constants.DefaultRolesTableName;
+  public string DefaultTableName { get; set; } = Constants.DefaultTableName;
   public IAmazonDynamoDB? Database { get; set; }
   public ProvisionedThroughput ProvisionedThroughput { get; set; } = new ProvisionedThroughput
   {

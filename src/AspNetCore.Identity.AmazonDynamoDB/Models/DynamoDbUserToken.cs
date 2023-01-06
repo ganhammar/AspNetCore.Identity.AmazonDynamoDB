@@ -2,14 +2,20 @@
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 
-[DynamoDBTable(Constants.DefaultUserTokensTableName)]
+[DynamoDBTable(Constants.DefaultTableName)]
 public class DynamoDbUserToken
 {
   [DynamoDBHashKey]
-  public string Id
+  public string PartitionKey
   {
-    get => $"{UserId}#{LoginProvider}#{Name}";
-    set { }
+    get => $"USER#{UserId}";
+    private set { }
+  }
+  [DynamoDBRangeKey]
+  public string SortKey
+  {
+    get => $"TOKEN#{LoginProvider}-{Name}";
+    private set { }
   }
   public virtual string? UserId { get; set; }
   public virtual string? LoginProvider { get; set; }

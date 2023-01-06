@@ -22,46 +22,11 @@ public class DynamoDbBuilder
     return this;
   }
 
-  public DynamoDbBuilder SetRolesTableName(string name)
+  public DynamoDbBuilder SetDefaultTableName(string name)
   {
     ArgumentNullException.ThrowIfNull(name);
 
-    return Configure(options => options.RolesTableName = name);
-  }
-
-  public DynamoDbBuilder SetUserClaimsTableName(string name)
-  {
-    ArgumentNullException.ThrowIfNull(name);
-
-    return Configure(options => options.UserClaimsTableName = name);
-  }
-
-  public DynamoDbBuilder SetUserLoginsTableName(string name)
-  {
-    ArgumentNullException.ThrowIfNull(name);
-
-    return Configure(options => options.UserLoginsTableName = name);
-  }
-
-  public DynamoDbBuilder SetUserRolesTableName(string name)
-  {
-    ArgumentNullException.ThrowIfNull(name);
-
-    return Configure(options => options.UserRolesTableName = name);
-  }
-
-  public DynamoDbBuilder SetUserTokensTableName(string name)
-  {
-    ArgumentNullException.ThrowIfNull(name);
-
-    return Configure(options => options.UserTokensTableName = name);
-  }
-
-  public DynamoDbBuilder SetUsersTableName(string name)
-  {
-    ArgumentNullException.ThrowIfNull(name);
-
-    return Configure(options => options.UsersTableName = name);
+    return Configure(options => options.DefaultTableName = name);
   }
 
   public DynamoDbBuilder UseDatabase(IAmazonDynamoDB database)
