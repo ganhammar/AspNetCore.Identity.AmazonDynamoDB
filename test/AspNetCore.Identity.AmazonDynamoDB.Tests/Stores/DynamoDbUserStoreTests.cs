@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
 
@@ -285,6 +287,52 @@ public class DynamoDbUserStoreTests
     // Assert
     var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
     Assert.Null(dbUser);
+  }
+
+  [Fact]
+  public async Task Should_DeleteUserWithClaims_When_ParametersIsCorrect()
+  {
+    // Arrange
+    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser
+    {
+      Email = "test@test.se",
+    };
+    await context.SaveAsync(user);
+
+    var claims = new List<Claim>();
+    for (var i = 0; i < 5; i++)
+    {
+      var type = $"Claim{i}";
+      var value = $"{i}";
+      claims.Add(new Claim(type, value));
+      var claim = new DynamoDbUserClaim
+      {
+        ClaimType = type,
+        ClaimValue = value,
+        UserId = user.Id,
+      };
+      await context.SaveAsync(claim);
+    }
+
+    // Act
+    await userStore.DeleteAsync(user, CancellationToken.None);
+
+    // Assert
+    var query = await DatabaseFixture.Client.QueryAsync(new QueryRequest()
+    {
+      ProjectionExpression = "PartitionKey",
+      TableName = options.CurrentValue.DefaultTableName,
+      KeyConditionExpression = "PartitionKey = :partitionKey",
+      ExpressionAttributeValues = new()
+      {
+        { ":partitionKey", new(user.PartitionKey) },
+      },
+    });
+    Assert.Empty(query.Items);
   }
 
   [Fact]

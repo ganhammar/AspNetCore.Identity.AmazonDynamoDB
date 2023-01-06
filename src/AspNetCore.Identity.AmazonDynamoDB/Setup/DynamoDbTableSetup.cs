@@ -77,20 +77,6 @@ public static class DynamoDbTableSetup
         },
         new()
         {
-          IndexName = "UserId-index",
-          KeySchema = new List<KeySchemaElement>
-          {
-            new KeySchemaElement("UserId", KeyType.HASH),
-            new KeySchemaElement("SortKey", KeyType.RANGE),
-          },
-          ProvisionedThroughput = provisionedThroughput,
-          Projection = new Projection
-          {
-            ProjectionType = ProjectionType.ALL,
-          },
-        },
-        new()
-        {
           IndexName = "ClaimType-ClaimValue-index",
           KeySchema = new List<KeySchemaElement>
           {
@@ -157,7 +143,6 @@ public static class DynamoDbTableSetup
         // User Attributes
         new("NormalizedEmail", ScalarAttributeType.S),
         new("NormalizedUserName", ScalarAttributeType.S),
-        new("UserId", ScalarAttributeType.S),
         new("ClaimType", ScalarAttributeType.S),
         new("ClaimValue", ScalarAttributeType.S),
         new("RoleName", ScalarAttributeType.S),

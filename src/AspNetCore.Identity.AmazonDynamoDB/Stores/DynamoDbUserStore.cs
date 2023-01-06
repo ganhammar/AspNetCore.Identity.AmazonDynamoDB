@@ -2,6 +2,7 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -24,8 +25,9 @@ public class DynamoDbUserStore<TUserEntity> :
     IProtectedUserStore<TUserEntity>
   where TUserEntity : DynamoDbUser, new()
 {
-  private IAmazonDynamoDB _client;
-  private IDynamoDBContext _context;
+  private readonly IAmazonDynamoDB _client;
+  private readonly IDynamoDBContext _context;
+  private readonly string _tableName;
   private const string InternalLoginProvider = "[AspNetUserStore]";
   private const string AuthenticatorKeyTokenName = "AuthenticatorKey";
   private const string RecoveryCodeTokenName = "RecoveryCodes";
@@ -45,6 +47,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     _client = database ?? options.Database!;
     _context = new DynamoDBContext(_client);
+    _tableName = options.DefaultTableName ?? Constants.DefaultTableName;
   }
 
   public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
@@ -80,7 +83,6 @@ public class DynamoDbUserStore<TUserEntity> :
     }
   }
 
-  // TODO: Ensure initialized
   public Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
@@ -97,7 +99,6 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.CompletedTask;
   }
 
-  // TODO: Ensure initialized
   public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
@@ -126,12 +127,26 @@ public class DynamoDbUserStore<TUserEntity> :
     return IdentityResult.Success;
   }
 
-  // TODO: Cleanup resources connected to the user (roles, logins, claims)
   public async Task<IdentityResult> DeleteAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    await _context.DeleteAsync(user, cancellationToken);
+    var query = await _client.QueryAsync(new()
+    {
+      ProjectionExpression = "PartitionKey, SortKey",
+      TableName = _tableName,
+      KeyConditionExpression = "PartitionKey = :partitionKey",
+      ExpressionAttributeValues = new()
+      {
+        { ":partitionKey", new(user.PartitionKey) },
+      },
+    }, cancellationToken);
+
+    var requests = query.Items.Select(x => new WriteRequest(new DeleteRequest(x))).ToList();
+    await _client.BatchWriteItemAsync(new BatchWriteItemRequest(new()
+    {
+      { _tableName, requests }
+    }), cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -235,13 +250,12 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
     {
-      IndexName = "UserId-index",
       KeyExpression = new Expression
       {
-        ExpressionStatement = "UserId = :userId and begins_with(SortKey, :sortKey)",
+        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
         {
-          { ":userId", user.Id },
+          { ":partitionKey", user.PartitionKey },
           { ":sortKey", "CLAIM#" },
         },
       },
@@ -300,13 +314,12 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
     {
-      IndexName = "UserId-index",
       KeyExpression = new Expression
       {
-        ExpressionStatement = "UserId = :userId and begins_with(SortKey, :sortKey)",
+        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
         {
-          { ":userId", user.Id },
+          { ":partitionKey", user.PartitionKey },
           { ":sortKey", "LOGIN#" },
         },
       },
@@ -682,8 +695,8 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(user);
 
     // Ensure no one else is updating
-    var databaseApplication = await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, cancellationToken);
-    if (databaseApplication == default || databaseApplication.ConcurrencyStamp != user.ConcurrencyStamp)
+    var databaseUser = await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, cancellationToken);
+    if (databaseUser == default || databaseUser.ConcurrencyStamp != user.ConcurrencyStamp)
     {
       return IdentityResult.Failed(new IdentityError
       {
@@ -990,13 +1003,12 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     var search = _context.FromQueryAsync<DynamoDbUserToken>(new QueryOperationConfig
     {
-      IndexName = "UserId-index",
       KeyExpression = new Expression
       {
-        ExpressionStatement = "UserId = :userId and begins_with(SortKey, :sortKey)",
+        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
         ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
         {
-          { ":userId", user.Id },
+          { ":partitionKey", user.PartitionKey },
           { ":sortKey", "TOKEN#" },
         },
       },
