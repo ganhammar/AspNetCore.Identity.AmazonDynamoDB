@@ -27,7 +27,7 @@ services
             ReadCapacityUnits = 5, // Default is 1
             WriteCapacityUnits = 5, // Default is 1
         };
-        options.UsersTableName = "CustomIdentityUserTable"; // Default is identity.users
+        options.DefaultTableName = "my-custom-identity-table-name"; // Default is identity
     });
 ```
 
