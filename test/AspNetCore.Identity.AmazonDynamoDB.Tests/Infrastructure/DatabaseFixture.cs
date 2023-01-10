@@ -5,13 +5,15 @@ namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 public class DatabaseFixture : IDisposable
 {
   public static readonly string TableName = Guid.NewGuid().ToString();
-  public static readonly AmazonDynamoDBClient Client = new();
+  public static readonly AmazonDynamoDBClient Client = new(new AmazonDynamoDBConfig
+  {
+    ServiceURL = "http://localhost:8000",
+  });
   private bool _disposed;
 
   public DatabaseFixture()
   {
     CreateTable().GetAwaiter().GetResult();
-    var tables = Client.ListTablesAsync().GetAwaiter().GetResult();
   }
 
   private async Task CreateTable()

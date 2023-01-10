@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0C06693D-0
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.Identity.AmazonDynamoDB.Tests", "test\AspNetCore.Identity.AmazonDynamoDB.Tests\AspNetCore.Identity.AmazonDynamoDB.Tests.csproj", "{C706F1EF-D17B-4DD0-9A0E-78B28AC2E409}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore.Identity.AmazonDynamoDB.IntegrationTests", "test\AspNetCore.Identity.AmazonDynamoDB.IntegrationTests\AspNetCore.Identity.AmazonDynamoDB.IntegrationTests.csproj", "{D10EE611-937C-48F9-8A97-AF100179BABA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{C706F1EF-D17B-4DD0-9A0E-78B28AC2E409}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C706F1EF-D17B-4DD0-9A0E-78B28AC2E409}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C706F1EF-D17B-4DD0-9A0E-78B28AC2E409}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D10EE611-937C-48F9-8A97-AF100179BABA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D10EE611-937C-48F9-8A97-AF100179BABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D10EE611-937C-48F9-8A97-AF100179BABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D10EE611-937C-48F9-8A97-AF100179BABA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C2DF9DE5-4074-49E4-933F-970DAD1EC841} = {1D3B5650-86CC-41BD-88D1-9E0ACDDE55DC}
 		{C706F1EF-D17B-4DD0-9A0E-78B28AC2E409} = {0C06693D-0CAB-4A84-9ED3-2BE24E74F18B}
+		{D10EE611-937C-48F9-8A97-AF100179BABA} = {0C06693D-0CAB-4A84-9ED3-2BE24E74F18B}
 	EndGlobalSection
 EndGlobal
