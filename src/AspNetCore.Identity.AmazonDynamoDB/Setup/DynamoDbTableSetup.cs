@@ -25,11 +25,10 @@ public static class DynamoDbTableSetup
 
   public static void EnsureAliasCreated(DynamoDbOptions options)
   {
-    if (options.DefaultTableName != Constants.DefaultTableName &&
-      AWSConfigsDynamoDB.Context.TableAliases.Any(x => x.Key == Constants.DefaultTableName) == false)
+    if (options.DefaultTableName != Constants.DefaultTableName)
     {
-      AWSConfigsDynamoDB.Context.AddAlias(new TableAlias(
-        Constants.DefaultTableName, options.DefaultTableName));
+      AWSConfigsDynamoDB.Context.TableAliases
+        .TryAdd(Constants.DefaultTableName, options.DefaultTableName);
     }
   }
 
