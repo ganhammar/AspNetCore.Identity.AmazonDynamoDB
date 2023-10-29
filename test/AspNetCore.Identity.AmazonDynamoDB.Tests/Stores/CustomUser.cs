@@ -1,4 +1,4 @@
-namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
+﻿namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
 public class CustomUser : DynamoDbUser
 {
