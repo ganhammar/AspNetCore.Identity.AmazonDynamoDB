@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
@@ -434,6 +433,29 @@ public class DynamoDbUserStoreTests
 
     // Assert
     Assert.Equal(user.Email, foundUser!.Email);
+  }
+
+  [Fact]
+  public async Task Should_ReturnCustomerUser_When_FindingById()
+  {
+    // Arrange
+    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<CustomUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new CustomUser
+    {
+      Email = "test@test.se",
+      ProfilePictureUrl = "https://test.se/my-beautiful-profile-picture.png",
+    };
+    await context.SaveAsync(user);
+
+    // Act
+    var foundUser = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
+
+    // Assert
+    Assert.Equal(user.Email, foundUser!.Email);
+    Assert.Equal(user.ProfilePictureUrl, foundUser!.ProfilePictureUrl);
   }
 
   [Fact]

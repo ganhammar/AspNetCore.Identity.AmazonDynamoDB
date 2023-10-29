@@ -50,3 +50,23 @@ In order to run the tests, you need to have DynamoDB running locally on `localho
 ```
 docker run -p 8000:8000 amazon/dynamodb-local
 ```
+
+## Adding Attributes
+
+To add custom attributes to the user or role model, you would need to create a new class that extends the `DynamoDbUser` or `DynamoDbRole` and add the needed additional attributes.
+
+```c#
+public class CustomUser : DynamoDbUser
+{
+    public string? ProfilePictureUrl { get; set; }
+}
+```
+
+Then you need to use your new classes when adding the DynamoDB stores:
+
+```c#
+services
+    .AddIdentityCore<CustomUser>()
+    .AddRoles<CustomRole>()
+    .AddDynamoDbStores();
+```
