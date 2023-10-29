@@ -152,7 +152,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return IdentityResult.Success;
   }
 
-  public async Task<TUserEntity> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+  public async Task<TUserEntity?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedEmail);
 
@@ -173,7 +173,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return users?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
   }
 
-  public async Task<TUserEntity> FindByIdAsync(string userId, CancellationToken cancellationToken)
+  public async Task<TUserEntity?> FindByIdAsync(string userId, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(userId);
 
@@ -184,7 +184,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, cancellationToken);
   }
 
-  public async Task<TUserEntity> FindByLoginAsync(
+  public async Task<TUserEntity?> FindByLoginAsync(
     string loginProvider, string providerKey, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(loginProvider);
@@ -206,20 +206,20 @@ public class DynamoDbUserStore<TUserEntity> :
     });
     var logins = await search.GetNextSetAsync(cancellationToken);
 
-    if (logins.Any() == false)
+    if (logins.Any() == false || logins.First().UserId == default)
     {
-      return default!; // Hide compiler warning until Identity handles nullable (v7)
+      return default;
     }
 
     var user = new DynamoDbUser
     {
-      Id = logins.First().UserId,
+      Id = logins.First().UserId!,
     };
     return await _context.LoadAsync<TUserEntity>(
       user.PartitionKey, user.SortKey, cancellationToken);
   }
 
-  public async Task<TUserEntity> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
+  public async Task<TUserEntity?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedUserName);
 
@@ -283,7 +283,7 @@ public class DynamoDbUserStore<TUserEntity> :
       .ToList();
   }
 
-  public Task<string> GetEmailAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetEmailAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
@@ -339,33 +339,35 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     return user.Logins
+      .Where(x => x.LoginProvider != default)
+      .Where(x => x.ProviderKey != default)
       .Select(x => new UserLoginInfo(
-        x.LoginProvider, x.ProviderKey, x.ProviderDisplayName))
+        x.LoginProvider!, x.ProviderKey!, x.ProviderDisplayName))
       .ToList();
   }
 
-  public Task<string> GetNormalizedEmailAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetNormalizedEmailAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
     return Task.FromResult(user.NormalizedEmail);
   }
 
-  public Task<string> GetNormalizedUserNameAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetNormalizedUserNameAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
     return Task.FromResult(user.NormalizedUserName);
   }
 
-  public Task<string> GetPasswordHashAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetPasswordHashAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
     return Task.FromResult(user.PasswordHash);
   }
 
-  public Task<string> GetPhoneNumberAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetPhoneNumberAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
@@ -409,7 +411,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return user.Roles;
   }
 
-  public Task<string> GetSecurityStampAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetSecurityStampAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
@@ -430,7 +432,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.FromResult(user.Id);
   }
 
-  public Task<string> GetUserNameAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetUserNameAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
@@ -457,11 +459,11 @@ public class DynamoDbUserStore<TUserEntity> :
     var userClaims = await search.GetRemainingAsync(cancellationToken);
 
     var batch = _context.CreateBatchGet<TUserEntity>();
-    foreach (var userId in userClaims.Select(x => x.UserId).Distinct())
+    foreach (var userId in userClaims.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
     {
       var user = new DynamoDbUser
       {
-        Id = userId,
+        Id = userId!,
       };
       batch.AddKey(user.PartitionKey, user.SortKey);
     }
@@ -490,11 +492,11 @@ public class DynamoDbUserStore<TUserEntity> :
     var userRoles = await search.GetRemainingAsync(cancellationToken);
 
     var batch = _context.CreateBatchGet<TUserEntity>();
-    foreach (var userId in userRoles.Select(x => x.UserId).Distinct())
+    foreach (var userId in userRoles.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
     {
       var user = new DynamoDbUser
       {
-        Id = userId,
+        Id = userId!,
       };
       batch.AddKey(user.PartitionKey, user.SortKey);
     }
@@ -607,7 +609,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.FromResult(user.AccessFailedCount);
   }
 
-  public Task SetEmailAsync(TUserEntity user, string email, CancellationToken cancellationToken)
+  public Task SetEmailAsync(TUserEntity user, string? email, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     user.Email = email;
@@ -635,28 +637,28 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.CompletedTask;
   }
 
-  public Task SetNormalizedEmailAsync(TUserEntity user, string normalizedEmail, CancellationToken cancellationToken)
+  public Task SetNormalizedEmailAsync(TUserEntity user, string? normalizedEmail, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     user.NormalizedEmail = normalizedEmail;
     return Task.CompletedTask;
   }
 
-  public Task SetNormalizedUserNameAsync(TUserEntity user, string normalizedName, CancellationToken cancellationToken)
+  public Task SetNormalizedUserNameAsync(TUserEntity user, string? normalizedName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     user.NormalizedUserName = normalizedName;
     return Task.CompletedTask;
   }
 
-  public Task SetPasswordHashAsync(TUserEntity user, string passwordHash, CancellationToken cancellationToken)
+  public Task SetPasswordHashAsync(TUserEntity user, string? passwordHash, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     user.PasswordHash = passwordHash;
     return Task.CompletedTask;
   }
 
-  public Task SetPhoneNumberAsync(TUserEntity user, string phoneNumber, CancellationToken cancellationToken)
+  public Task SetPhoneNumberAsync(TUserEntity user, string? phoneNumber, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     user.PhoneNumber = phoneNumber;
@@ -684,7 +686,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.CompletedTask;
   }
 
-  public Task SetUserNameAsync(TUserEntity user, string userName, CancellationToken cancellationToken)
+  public Task SetUserNameAsync(TUserEntity user, string? userName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     user.UserName = userName;
@@ -912,7 +914,7 @@ public class DynamoDbUserStore<TUserEntity> :
   public Task SetAuthenticatorKeyAsync(TUserEntity user, string key, CancellationToken cancellationToken)
     => SetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, key, cancellationToken);
 
-  public Task<string> GetAuthenticatorKeyAsync(TUserEntity user, CancellationToken cancellationToken)
+  public Task<string?> GetAuthenticatorKeyAsync(TUserEntity user, CancellationToken cancellationToken)
     => GetTokenAsync(user, InternalLoginProvider, AuthenticatorKeyTokenName, cancellationToken);
 
   public async Task RemoveTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
@@ -928,7 +930,7 @@ public class DynamoDbUserStore<TUserEntity> :
     }
   }
 
-  public async Task<string> GetTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
+  public async Task<string?> GetTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     ArgumentNullException.ThrowIfNull(loginProvider);
@@ -976,7 +978,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return 0;
   }
 
-  public async Task SetTokenAsync(TUserEntity user, string loginProvider, string name, string value, CancellationToken cancellationToken = default)
+  public async Task SetTokenAsync(TUserEntity user, string loginProvider, string name, string? value, CancellationToken cancellationToken = default)
   {
     ArgumentNullException.ThrowIfNull(user);
 
@@ -1022,11 +1024,14 @@ public class DynamoDbUserStore<TUserEntity> :
     if (user.Tokens.Any() == false)
     {
       var tokens = await GetRawTokens(user, cancellationToken);
+
       user.Tokens = tokens
+        .Where(x => x.LoginProvider != default)
+        .Where(x => x.Name != default)
         .Select(x => new IdentityUserToken<string>
         {
-          LoginProvider = x.LoginProvider,
-          Name = x.Name,
+          LoginProvider = x.LoginProvider!,
+          Name = x.Name!,
           UserId = x.UserId!,
           Value = x.Value,
         })

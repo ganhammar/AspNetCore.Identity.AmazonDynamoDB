@@ -2,7 +2,6 @@
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
-using Amazon.Util;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
 

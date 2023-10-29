@@ -153,13 +153,13 @@ public class DynamoDbUserStoreTests
     var user = await userStore.FindByIdAsync(userId, CancellationToken.None);
 
     // Act
-    await userStore.AddClaimsAsync(user, new List<Claim>
+    await userStore.AddClaimsAsync(user!, new List<Claim>
     {
       new Claim(ClaimTypes.Country, "se"),
     }, CancellationToken.None);
 
     // Assert
-    Assert.Single(user.Claims);
+    Assert.Single(user!.Claims);
     Assert.Equal(2, user.Claims.Where(x => x.Key == ClaimTypes.Country).SelectMany(x => x.Value).Count());
   }
 
@@ -383,7 +383,7 @@ public class DynamoDbUserStoreTests
     var foundUser = await userStore.FindByEmailAsync(user.NormalizedEmail, CancellationToken.None);
 
     // Assert
-    Assert.Equal(user.Id, foundUser.Id);
+    Assert.Equal(user.Id, foundUser!.Id);
   }
 
   [Fact]
@@ -433,7 +433,7 @@ public class DynamoDbUserStoreTests
     var foundUser = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
 
     // Assert
-    Assert.Equal(user.Email, foundUser.Email);
+    Assert.Equal(user.Email, foundUser!.Email);
   }
 
   [Fact]
@@ -506,7 +506,7 @@ public class DynamoDbUserStoreTests
       login.LoginProvider, login.ProviderKey, CancellationToken.None);
 
     // Assert
-    Assert.Equal(user.Id, foundUser.Id);
+    Assert.Equal(user.Id, foundUser!.Id);
   }
 
   [Fact]
@@ -557,7 +557,7 @@ public class DynamoDbUserStoreTests
     var foundUser = await userStore.FindByNameAsync(user.NormalizedUserName, CancellationToken.None);
 
     // Assert
-    Assert.Equal(user.Id, foundUser.Id);
+    Assert.Equal(user.Id, foundUser!.Id);
   }
 
   [Fact]
@@ -2393,6 +2393,7 @@ public class DynamoDbUserStoreTests
     // Assert
     var tokens = await userStore.GetTokenAsync(
       user, loginProvider, name, CancellationToken.None);
+    Assert.NotNull(tokens);
     Assert.Empty(tokens);
   }
 

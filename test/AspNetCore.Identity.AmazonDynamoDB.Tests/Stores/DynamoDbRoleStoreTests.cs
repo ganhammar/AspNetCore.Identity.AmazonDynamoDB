@@ -236,7 +236,7 @@ public class DynamoDbRoleStoreTests
     var foundRole = await roleStore.FindByIdAsync(role.Id, CancellationToken.None);
 
     // Assert
-    Assert.Equal(role.Name, foundRole.Name);
+    Assert.Equal(role.Name, foundRole!.Name);
   }
 
   [Fact]
@@ -287,7 +287,7 @@ public class DynamoDbRoleStoreTests
     var foundRole = await roleStore.FindByNameAsync(role.NormalizedName, CancellationToken.None);
 
     // Assert
-    Assert.Equal(role.Id, foundRole.Id);
+    Assert.Equal(role.Id, foundRole!.Id);
   }
 
   [Fact]

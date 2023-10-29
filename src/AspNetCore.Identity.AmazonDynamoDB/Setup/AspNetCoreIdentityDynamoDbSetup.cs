@@ -33,7 +33,7 @@ public static class AspNetCoreIdentityDynamoDbSetup
     CancellationToken cancellationToken = default)
   {
     await DynamoDbTableSetup.EnsureInitializedAsync(
-      options.CurrentValue, database);
+      options.CurrentValue, database, cancellationToken);
   }
 
   public static void EnsureInitialized(

@@ -69,7 +69,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return IdentityResult.Success;
   }
 
-  public async Task<TRoleEntity> FindByIdAsync(string roleId, CancellationToken cancellationToken)
+  public async Task<TRoleEntity?> FindByIdAsync(string roleId, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(roleId);
 
@@ -80,7 +80,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, cancellationToken);
   }
 
-  public async Task<TRoleEntity> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+  public async Task<TRoleEntity?> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedRoleName);
 
@@ -110,7 +110,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
       .ToList() as IList<Claim>);
   }
 
-  public Task<string> GetNormalizedRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)
+  public Task<string?> GetNormalizedRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(role);
 
@@ -124,7 +124,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return Task.FromResult(role.Id);
   }
 
-  public Task<string> GetRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)
+  public Task<string?> GetRoleNameAsync(TRoleEntity role, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(role);
 
@@ -149,7 +149,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return Task.CompletedTask;
   }
 
-  public Task SetNormalizedRoleNameAsync(TRoleEntity role, string normalizedName, CancellationToken cancellationToken)
+  public Task SetNormalizedRoleNameAsync(TRoleEntity role, string? normalizedName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(role);
     ArgumentNullException.ThrowIfNull(normalizedName);
@@ -159,7 +159,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return Task.CompletedTask;
   }
 
-  public Task SetRoleNameAsync(TRoleEntity role, string roleName, CancellationToken cancellationToken)
+  public Task SetRoleNameAsync(TRoleEntity role, string? roleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(role);
     ArgumentNullException.ThrowIfNull(roleName);

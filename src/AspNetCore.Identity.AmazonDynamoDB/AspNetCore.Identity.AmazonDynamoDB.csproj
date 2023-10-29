@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Anton Ganhammar</Authors>
     <RepositoryUrl>https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -14,8 +14,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.5.14" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.10" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.203.11" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="7.0.13" />
   </ItemGroup>
 
 </Project>

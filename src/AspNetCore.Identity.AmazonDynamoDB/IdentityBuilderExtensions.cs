@@ -15,12 +15,15 @@ public static class IdentityBuilderExtensions
     return new DynamoDbBuilder(builder.Services);
   }
 
-  private static void AddStores(IServiceCollection services, Type userType, Type roleType)
+  private static void AddStores(IServiceCollection services, Type userType, Type? roleType)
   {
     var userStoreType = typeof(DynamoDbUserStore<>).MakeGenericType(userType);
     services.TryAddSingleton(typeof(IUserStore<>).MakeGenericType(userType), userStoreType);
 
-    var roleStoreType = typeof(DynamoDbRoleStore<>).MakeGenericType(roleType);
-    services.TryAddSingleton(typeof(IRoleStore<>).MakeGenericType(roleType), roleStoreType);
+    if (roleType != default)
+    {
+      var roleStoreType = typeof(DynamoDbRoleStore<>).MakeGenericType(roleType);
+      services.TryAddSingleton(typeof(IRoleStore<>).MakeGenericType(roleType), roleStoreType);
+    }
   }
 }
