@@ -2,7 +2,7 @@
 
 ![Build Status](https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB/actions/workflows/ci-cd.yml/badge.svg) [![codecov](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB/branch/main/graph/badge.svg?token=S4M1VCX8J6)](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB) [![NuGet](https://img.shields.io/nuget/v/AspNetCore.Identity.AmazonDynamoDB)](https://www.nuget.org/packages/AspNetCore.Identity.AmazonDynamoDB)
 
-An [ASP.NET Core Identity 6.0](https://github.com/dotnet/aspnetcore/tree/main/src/Identity) provider for [DynamoDB](https://aws.amazon.com/dynamodb/).
+An [ASP.NET Core Identity 8.0](https://github.com/dotnet/aspnetcore/tree/main/src/Identity) provider for [DynamoDB](https://aws.amazon.com/dynamodb/).
 
 ## Getting Started
 
@@ -31,7 +31,7 @@ services
     });
 ```
 
-Finally you need to ensure that tables and indexes has been added:
+Finally, you need to ensure that tables and indexes have been added:
 
 ```c#
 DynamoDbSetup.EnsureInitialized(serviceProvider);
@@ -45,7 +45,7 @@ await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(serviceProvider);
 
 ## Tests
 
-In order to run the tests, you need to have DynamoDB running locally on `localhost:8000`. This can easily be done using [Docker](https://www.docker.com/) and the following command:
+To run the tests, you need to have DynamoDB running locally on `localhost:8000`. This can easily be done using [Docker](https://www.docker.com/) and the following command:
 
 ```
 docker run -p 8000:8000 amazon/dynamodb-local
@@ -53,7 +53,7 @@ docker run -p 8000:8000 amazon/dynamodb-local
 
 ## Adding Attributes
 
-To add custom attributes to the user or role model, you would need to create a new class that extends the `DynamoDbUser` or `DynamoDbRole` and add the needed additional attributes.
+To add custom attributes to the user or role model, you would need to create a new class that extends the `DynamoDbUser` or `DynamoDbRole` and adds the needed additional attributes.
 
 ```c#
 public class CustomUser : DynamoDbUser

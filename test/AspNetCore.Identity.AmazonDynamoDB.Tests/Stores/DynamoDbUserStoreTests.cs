@@ -2202,7 +2202,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveOldClaims_When_Updating()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2224,7 +2223,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_NotRemoveClaims_When_Updating()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2244,7 +2242,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveOldRoles_When_Updating()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2266,7 +2263,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_NotRemoveRoles_When_Updating()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2286,7 +2282,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveOldLogins_When_Updating()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2312,7 +2307,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_NotRemoveLogins_When_Updating()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2336,7 +2330,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_SaveClaims_When_OneKeyHasMultipleValues()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2355,7 +2348,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_SaveTokens_When_CreatingUser()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2366,7 +2358,7 @@ public class DynamoDbUserStoreTests
     {
       Tokens = new List<IdentityUserToken<string>>
       {
-        new IdentityUserToken<string>
+        new()
         {
           LoginProvider = loginProvider,
           Name = name,
@@ -2388,7 +2380,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveTokens_When_UpdatingUserAndTokensHasBeenRemoved()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2398,7 +2389,7 @@ public class DynamoDbUserStoreTests
     {
       Tokens = new List<IdentityUserToken<string>>
       {
-        new IdentityUserToken<string>
+        new()
         {
           LoginProvider = loginProvider,
           Name = name,
@@ -2423,7 +2414,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_AddToken_When_UpdatingUserAndTokenHasBeenAdded()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2433,7 +2423,7 @@ public class DynamoDbUserStoreTests
     {
       Tokens = new List<IdentityUserToken<string>>
       {
-        new IdentityUserToken<string>
+        new()
         {
           LoginProvider = originalLoginProvider,
           Name = originalName,
@@ -2462,7 +2452,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_UpdateExistingToken_When_ItAlreadyExists()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2472,7 +2461,7 @@ public class DynamoDbUserStoreTests
     {
       Tokens = new List<IdentityUserToken<string>>
       {
-        new IdentityUserToken<string>
+        new()
         {
           LoginProvider = loginProvider,
           Name = name,
@@ -2496,7 +2485,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_AddAuthenticatorKey_When_UpdatingUser()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2517,7 +2505,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnAuthenticatorKey_When_OneHasBeenSet()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2601,7 +2588,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_CountCodes_When_TokenHasValue()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2620,7 +2606,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnZero_When_ThereIsNoCodes()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2668,7 +2653,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnTrue_When_RedeemingExistingCode()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2689,7 +2673,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnFalse_When_RedeemingNonExistingCode()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2708,7 +2691,6 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnFalse_When_ThereIsNoExistingCodes()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);

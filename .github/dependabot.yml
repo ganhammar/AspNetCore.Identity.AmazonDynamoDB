@@ -1,0 +1,31 @@
+version: 2
+
+registries:
+  nuget-official:
+    type: nuget-feed
+    url: https://api.nuget.org/v3/index.json
+
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+
+  - package-ecosystem: 'nuget'
+    directory: '/'
+    registries: ['nuget-official']
+    schedule:
+      interval: 'weekly'
+
+    groups:
+      non-major-deps:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+    commit-message:
+      prefix: 'fix'
+      prefix-development: 'chore'
+      include: 'scope'
