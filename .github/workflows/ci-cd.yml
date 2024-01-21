@@ -41,6 +41,7 @@ jobs:
         run: dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov
       - name: Publish Code Coverage
         uses: codecov/codecov-action@v3
+        if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: test/**/TestResults/coverage.info
