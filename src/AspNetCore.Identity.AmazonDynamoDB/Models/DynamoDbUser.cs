@@ -10,15 +10,16 @@ public class DynamoDbUser : IdentityUser
   public string PartitionKey
   {
     get => $"USER#{Id}";
-    private set { }
+    set { }
   }
   [DynamoDBRangeKey]
   public string? SortKey
   {
     get => $"#USER#{Id}";
-    private set { }
+    set { }
   }
-  public new DateTime? LockoutEnd { get; set; }
+  [DynamoDBProperty(typeof(DateTimeOffsetConverter))]
+  public override DateTimeOffset? LockoutEnd { get; set; }
   [DynamoDBIgnore]
   public Dictionary<string, List<string>> Claims { get; set; } = new();
   [DynamoDBIgnore]

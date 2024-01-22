@@ -9,7 +9,7 @@ public class DynamoDbUserLogin
   public string PartitionKey
   {
     get => $"USER#{UserId}";
-    private set { }
+    set { }
   }
   [DynamoDBRangeKey]
   public string SortKey

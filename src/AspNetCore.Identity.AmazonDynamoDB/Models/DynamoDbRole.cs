@@ -10,7 +10,7 @@ public class DynamoDbRole : IdentityRole
   public string PartitionKey
   {
     get => $"ROLE#{Id}";
-    private set { }
+    set { }
   }
   [DynamoDBRangeKey]
   public string? SortKey

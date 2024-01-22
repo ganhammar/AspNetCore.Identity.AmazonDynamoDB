@@ -9,13 +9,13 @@ public class DynamoDbUserRole
   public string PartitionKey
   {
     get => $"USER#{UserId}";
-    private set { }
+    set { }
   }
   [DynamoDBRangeKey]
   public string SortKey
   {
     get => $"ROLE#{RoleName}";
-    private set { }
+    set { }
   }
   public string? UserId { get; set; }
   public string? RoleName { get; set; }

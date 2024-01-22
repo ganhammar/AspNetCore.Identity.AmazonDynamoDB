@@ -9,13 +9,13 @@ public class DynamoDbUserToken
   public string PartitionKey
   {
     get => $"USER#{UserId}";
-    private set { }
+    set { }
   }
   [DynamoDBRangeKey]
   public string SortKey
   {
     get => $"TOKEN#{LoginProvider}-{Name}";
-    private set { }
+    set { }
   }
   public virtual string? UserId { get; set; }
   public virtual string? LoginProvider { get; set; }
