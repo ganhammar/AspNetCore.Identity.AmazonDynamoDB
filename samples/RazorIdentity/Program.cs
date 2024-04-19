@@ -1,4 +1,4 @@
-using Amazon.DynamoDBv2;
+﻿using Amazon.DynamoDBv2;
 using AspNetCore.Identity.AmazonDynamoDB;
 using Microsoft.AspNetCore.Identity;
 
@@ -16,7 +16,7 @@ builder.Services
     new AmazonDynamoDBClient(
         new AmazonDynamoDBConfig
         {
-            ServiceURL = "http://localhost:8000"
+          ServiceURL = "http://localhost:8000"
         }
     ) :
     new()
@@ -27,7 +27,7 @@ builder.Services
     .AddDynamoDbStores()
     .Configure(options =>
     {
-        options.DefaultTableName = "identity-samples-identity-api";
+      options.DefaultTableName = "identity-samples-identity-api";
     });
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddRazorPages();
@@ -37,8 +37,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+  app.UseSwagger();
+  app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
@@ -55,15 +55,15 @@ var summaries = new[]
 
 app.MapGet("/weatherforecast", () =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+  var forecast = Enumerable.Range(1, 5).Select(index =>
+      new WeatherForecast
+      (
+          DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+          Random.Shared.Next(-20, 55),
+          summaries[Random.Shared.Next(summaries.Length)]
+      ))
+      .ToArray();
+  return forecast;
 })
 .WithName("GetWeatherForecast")
 .WithOpenApi();
@@ -75,5 +75,5 @@ app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+  public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }

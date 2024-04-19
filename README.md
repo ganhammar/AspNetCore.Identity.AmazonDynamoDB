@@ -34,7 +34,7 @@ services
 Finally, you need to ensure that tables and indexes have been added:
 
 ```c#
-DynamoDbSetup.EnsureInitialized(serviceProvider);
+AspNetCoreIdentityDynamoDbSetup.EnsureInitialized(serviceProvider);
 ```
 
 Or asynchronously:
