@@ -1,0 +1,17 @@
+@using Microsoft.AspNetCore.Identity
+@using AspNetCore.Identity.AmazonDynamoDB
+@inject SignInManager<DynamoDbUser> SignInManager
+@inject UserManager<DynamoDbUser> UserManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <form asp-area="Identity" asp-page="/Account/Logout" method="post" id="logoutForm" class="form-inline my-2 my-lg-0">
+        <span class="text-white">Hello, @UserManager.GetUserName(User)!</span>
+        <button type="submit" class="btn btn-link text-white">Logout</button>
+    </form>
+}
+else
+{
+    <a class="btn btn-link text-white" asp-area="Identity" asp-page="/Account/Register">Register</a>
+    <a class="btn btn-link text-white" asp-area="Identity" asp-page="/Account/Login">Login</a>
+}
