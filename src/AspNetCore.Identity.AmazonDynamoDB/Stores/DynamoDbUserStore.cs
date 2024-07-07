@@ -55,27 +55,29 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    if (claims?.Any() != true)
+    if (claims.Any() == false)
     {
       return;
     }
 
-    if (user.Claims.Any() == false)
+    if (user.Claims == default)
     {
       var rawClaims = await GetRawClaims(user, cancellationToken);
       user.Claims = ToDictionary(rawClaims);
     }
 
-    AddClaims(user, claims);
+    DynamoDbUserStore<TUserEntity>.AddClaims(user, claims);
   }
 
-  private void AddClaims(TUserEntity user, IEnumerable<Claim> claims)
+  private static void AddClaims(TUserEntity user, IEnumerable<Claim> claims)
   {
+    user.Claims ??= new();
+
     foreach (var claim in claims)
     {
-      if (user.Claims.ContainsKey(claim.Type))
+      if (user.Claims.TryGetValue(claim.Type, out var value))
       {
-        user.Claims[claim.Type].Add(claim.Value);
+        value.Add(claim.Value);
       }
       else
       {
@@ -88,6 +90,8 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
     ArgumentNullException.ThrowIfNull(login);
+
+    user.Logins ??= new();
 
     user.Logins.Add(new DynamoDbUserLogin
     {
@@ -104,6 +108,8 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
     ArgumentNullException.ThrowIfNull(roleName);
+
+    user.Roles ??= new();
 
     if (user.Roles.Contains(roleName) == false)
     {
@@ -272,13 +278,13 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    if (user.Claims.Any() == false)
+    if (user.Claims == default)
     {
       var claims = await GetRawClaims(user, cancellationToken);
       user.Claims = ToDictionary(claims);
     }
 
-    return FlattenClaims(user)
+    return DynamoDbUserStore<TUserEntity>.FlattenClaims(user)
       .Select(x => new Claim(x.Key, x.Value))
       .ToList();
   }
@@ -333,7 +339,7 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    if (user.Logins.Any() == false)
+    if (user.Logins == default)
     {
       user.Logins = await GetRawLogins(user, cancellationToken);
     }
@@ -402,7 +408,7 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    if (user.Roles.Any() == false)
+    if (user.Roles == default)
     {
       var roles = await GetRawRoles(user, cancellationToken);
       user.Roles = roles.Select(x => x.RoleName!).ToList();
@@ -599,7 +605,7 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(newClaim);
 
     await RemoveClaimsAsync(user, new List<Claim> { claim }, cancellationToken);
-    AddClaims(user, new List<Claim> { newClaim });
+    DynamoDbUserStore<TUserEntity>.AddClaims(user, new List<Claim> { newClaim });
   }
 
   public Task ResetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -719,14 +725,19 @@ public class DynamoDbUserStore<TUserEntity> :
     return IdentityResult.Success;
   }
 
-  private List<KeyValuePair<string, string>> FlattenClaims(TUserEntity user) => user.Claims
-      .SelectMany(x => x.Value.Select(y => new KeyValuePair<string, string>(x.Key, y)))
-      .ToList();
+  private static List<KeyValuePair<string, string>> FlattenClaims(TUserEntity user) => user.Claims
+      ?.SelectMany(x => x.Value.Select(y => new KeyValuePair<string, string>(x.Key, y)))
+      .ToList() ?? new();
 
   public async Task RemoveDeletedClaims(TUserEntity user, CancellationToken cancellationToken)
   {
+    if (user.Claims == default)
+    {
+      return;
+    }
+
     var persistedClaims = await GetRawClaims(user, cancellationToken);
-    var newClaims = FlattenClaims(user).Select(x => new DynamoDbUserClaim
+    var newClaims = DynamoDbUserStore<TUserEntity>.FlattenClaims(user).Select(x => new DynamoDbUserClaim
     {
       ClaimType = x.Key,
       ClaimValue = x.Value,
@@ -744,7 +755,7 @@ public class DynamoDbUserStore<TUserEntity> :
         batch.AddDeleteItem(claim);
       }
 
-      await batch.ExecuteAsync();
+      await batch.ExecuteAsync(cancellationToken);
     }
   }
 
@@ -752,13 +763,13 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     await RemoveDeletedClaims(user, cancellationToken);
 
-    if (user.Claims.Any() == false)
+    if (user.Claims == default)
     {
       return;
     }
 
     var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
-    var flattenClaims = FlattenClaims(user);
+    var flattenClaims = DynamoDbUserStore<TUserEntity>.FlattenClaims(user);
 
     foreach (var claim in flattenClaims)
     {
@@ -775,6 +786,11 @@ public class DynamoDbUserStore<TUserEntity> :
 
   public async Task RemoveDeletedLogins(TUserEntity user, CancellationToken cancellationToken)
   {
+    if (user.Logins == default)
+    {
+      return;
+    }
+
     var persistedLogins = await GetRawLogins(user, cancellationToken);
     var newLogins = user.Logins;
 
@@ -789,7 +805,7 @@ public class DynamoDbUserStore<TUserEntity> :
         batch.AddDeleteItem(login);
       }
 
-      await batch.ExecuteAsync();
+      await batch.ExecuteAsync(cancellationToken);
     }
   }
 
@@ -797,14 +813,14 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     await RemoveDeletedLogins(user, cancellationToken);
 
-    if (user.Logins.Any() == false)
+    if (user.Logins == default)
     {
       return;
     }
 
     var batch = _context.CreateBatchWrite<DynamoDbUserLogin>();
 
-    foreach (var login in user.Logins)
+    foreach (var login in user.Logins!)
     {
       login.UserId = user.Id;
       batch.AddPutItem(login);
@@ -815,6 +831,11 @@ public class DynamoDbUserStore<TUserEntity> :
 
   public async Task RemoveDeletedRoles(TUserEntity user, CancellationToken cancellationToken)
   {
+    if (user.Roles == default)
+    {
+      return;
+    }
+
     var persistedRoles = await GetRawRoles(user, cancellationToken);
     var newRoles = user.Roles.Select(x => new DynamoDbUserRole
     {
@@ -833,7 +854,7 @@ public class DynamoDbUserStore<TUserEntity> :
         batch.AddDeleteItem(role);
       }
 
-      await batch.ExecuteAsync();
+      await batch.ExecuteAsync(cancellationToken);
     }
   }
 
@@ -841,14 +862,14 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     await RemoveDeletedRoles(user, cancellationToken);
 
-    if (user.Roles.Any() == false)
+    if (user.Roles == default)
     {
       return;
     }
 
     var batch = _context.CreateBatchWrite<DynamoDbUserRole>();
 
-    foreach (var role in user.Roles)
+    foreach (var role in user.Roles!)
     {
       batch.AddPutItem(new()
       {
@@ -862,6 +883,11 @@ public class DynamoDbUserStore<TUserEntity> :
 
   public async Task RemoveDeletedTokens(TUserEntity user, CancellationToken cancellationToken)
   {
+    if (user.Tokens == default)
+    {
+      return;
+    }
+
     var persistedTokens = await GetRawTokens(user, cancellationToken);
     var newTokens = user.Tokens.Select(x => new DynamoDbUserToken
     {
@@ -882,7 +908,7 @@ public class DynamoDbUserStore<TUserEntity> :
         batch.AddDeleteItem(token);
       }
 
-      await batch.ExecuteAsync();
+      await batch.ExecuteAsync(cancellationToken);
     }
   }
 
@@ -890,14 +916,14 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     await RemoveDeletedTokens(user, cancellationToken);
 
-    if (user.Tokens.Any() == false)
+    if (user.Tokens == default)
     {
       return;
     }
 
     var batch = _context.CreateBatchWrite<DynamoDbUserToken>();
 
-    foreach (var token in user.Tokens)
+    foreach (var token in user.Tokens!)
     {
       batch.AddPutItem(new()
       {
@@ -926,7 +952,7 @@ public class DynamoDbUserStore<TUserEntity> :
     var entry = await FindTokenAsync(user, loginProvider, name, cancellationToken);
     if (entry != null)
     {
-      user.Tokens.RemoveAll(x => x.LoginProvider == entry.LoginProvider && x.Name == entry.Name);
+      user.Tokens?.RemoveAll(x => x.LoginProvider == entry.LoginProvider && x.Name == entry.Name);
     }
   }
 
@@ -937,7 +963,7 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(name);
 
     var token = await FindTokenAsync(user, loginProvider, name, cancellationToken);
-    return token?.Value ?? string.Empty;
+    return token?.Value;
   }
 
   public Task ReplaceCodesAsync(TUserEntity user, IEnumerable<string> recoveryCodes, CancellationToken cancellationToken)
@@ -985,7 +1011,7 @@ public class DynamoDbUserStore<TUserEntity> :
     var token = await FindTokenAsync(user, loginProvider, name, cancellationToken);
     if (token == null)
     {
-      user.Tokens.Add(new IdentityUserToken<string>
+      user.Tokens?.Add(new IdentityUserToken<string>
       {
         UserId = user.Id.ToString(),
         LoginProvider = loginProvider,
@@ -997,8 +1023,14 @@ public class DynamoDbUserStore<TUserEntity> :
     {
       token.Value = value;
 
-      var idx = user.Tokens.FindIndex(x => x.LoginProvider == token.LoginProvider && x.Name == token.Name);
-      user.Tokens[idx] = token;
+      var idx = user.Tokens?.FindIndex(x => x.LoginProvider == token.LoginProvider && x.Name == token.Name);
+
+      if (!idx.HasValue || user.Tokens == default)
+      {
+        return;
+      }
+
+      user.Tokens[idx.Value] = token;
     }
   }
 
@@ -1021,7 +1053,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
   private async Task<IdentityUserToken<string>?> FindTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
   {
-    if (user.Tokens.Any() == false)
+    if (user.Tokens == default)
     {
       var tokens = await GetRawTokens(user, cancellationToken);
 
@@ -1038,7 +1070,7 @@ public class DynamoDbUserStore<TUserEntity> :
         .ToList();
     }
 
-    return user.Tokens.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
+    return user.Tokens!.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
   }
 
   protected virtual void Dispose(bool disposing)

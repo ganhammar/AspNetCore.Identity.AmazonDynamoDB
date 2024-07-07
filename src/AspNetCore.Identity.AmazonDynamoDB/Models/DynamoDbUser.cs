@@ -21,12 +21,11 @@ public class DynamoDbUser : IdentityUser
   [DynamoDBProperty(typeof(DateTimeOffsetConverter))]
   public override DateTimeOffset? LockoutEnd { get; set; }
   [DynamoDBIgnore]
-  public Dictionary<string, List<string>> Claims { get; set; } = new();
+  public Dictionary<string, List<string>>? Claims { get; set; }
   [DynamoDBIgnore]
-  public List<DynamoDbUserLogin> Logins { get; set; } = new();
+  public List<DynamoDbUserLogin>? Logins { get; set; }
   [DynamoDBIgnore]
-  public List<string> Roles { get; set; } = new();
+  public List<string>? Roles { get; set; }
   [DynamoDBIgnore]
-  public List<IdentityUserToken<string>> Tokens { get; set; }
-    = new List<IdentityUserToken<string>>();
+  public List<IdentityUserToken<string>>? Tokens { get; set; }
 }

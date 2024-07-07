@@ -110,7 +110,7 @@ public class DynamoDbUserStoreTests
     await userStore.AddClaimsAsync(user, new List<Claim>(), CancellationToken.None);
 
     // Assert
-    Assert.Empty(user.Claims);
+    Assert.Null(user.Claims);
   }
 
   [Fact]
@@ -125,12 +125,12 @@ public class DynamoDbUserStoreTests
     // Act
     await userStore.AddClaimsAsync(user, new List<Claim>
     {
-      new Claim(ClaimTypes.Country, "se"),
-      new Claim(ClaimTypes.Email, "test@test.se"),
+      new(ClaimTypes.Country, "se"),
+      new(ClaimTypes.Email, "test@test.se"),
     }, CancellationToken.None);
 
     // Assert
-    Assert.Equal(2, user.Claims.Count);
+    Assert.Equal(2, user.Claims!.Count);
   }
 
   [Fact]
@@ -158,8 +158,8 @@ public class DynamoDbUserStoreTests
     }, CancellationToken.None);
 
     // Assert
-    Assert.Single(user!.Claims);
-    Assert.Equal(2, user.Claims.Where(x => x.Key == ClaimTypes.Country).SelectMany(x => x.Value).Count());
+    Assert.Single(user!.Claims!);
+    Assert.Equal(2, user.Claims!.Where(x => x.Key == ClaimTypes.Country).SelectMany(x => x.Value).Count());
   }
 
   [Fact]
@@ -204,7 +204,7 @@ public class DynamoDbUserStoreTests
       user, new("test", "test", "test"), CancellationToken.None);
 
     // Assert
-    Assert.Single(user.Logins);
+    Assert.Single(user.Logins!);
   }
 
   [Fact]
@@ -249,7 +249,7 @@ public class DynamoDbUserStoreTests
       user, "test", CancellationToken.None);
 
     // Assert
-    Assert.Single(user.Roles);
+    Assert.Single(user.Roles!);
   }
 
   [Fact]
@@ -1905,7 +1905,7 @@ public class DynamoDbUserStoreTests
     await userStore.RemoveClaimsAsync(user, claims, CancellationToken.None);
 
     // Assert
-    Assert.Empty(user.Claims);
+    Assert.Empty(user.Claims!);
   }
 
   [Fact]
@@ -1958,7 +1958,7 @@ public class DynamoDbUserStoreTests
     await userStore.RemoveFromRoleAsync(user, roleName, CancellationToken.None);
 
     // Assert
-    Assert.Empty(user.Roles);
+    Assert.Empty(user.Roles!);
   }
 
   [Fact]
@@ -2027,7 +2027,7 @@ public class DynamoDbUserStoreTests
     await userStore.RemoveLoginAsync(user, loginProvider, providerKey, CancellationToken.None);
 
     // Assert
-    Assert.Empty(user.Logins);
+    Assert.Empty(user.Logins!);
   }
 
   [Fact]
@@ -2205,8 +2205,13 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Claims.Add("test", new() { "test" });
+    var user = new DynamoDbUser
+    {
+      Claims = new()
+      {
+        { "test", new() { "test" } },
+      }
+    };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
@@ -2226,8 +2231,13 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Claims.Add("test", new() { "test" });
+    var user = new DynamoDbUser
+    {
+      Claims = new()
+      {
+        { "test", new() { "test" } },
+      }
+    };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
@@ -2245,8 +2255,10 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Roles.Add("test");
+    var user = new DynamoDbUser
+    {
+      Roles = new() { "test" },
+    };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
@@ -2266,8 +2278,10 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Roles.Add("test");
+    var user = new DynamoDbUser
+    {
+      Roles = new() { "test" },
+    };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
@@ -2285,12 +2299,17 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Logins.Add(new()
+    var user = new DynamoDbUser
     {
-      LoginProvider = "test",
-      ProviderKey = "test",
-    });
+      Logins = new()
+      {
+        new()
+        {
+          LoginProvider = "test",
+          ProviderKey = "test",
+        },
+      },
+    };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
@@ -2310,12 +2329,17 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Logins.Add(new()
+    var user = new DynamoDbUser
     {
-      LoginProvider = "test",
-      ProviderKey = "test",
-    });
+      Logins = new()
+      {
+        new()
+        {
+          LoginProvider = "test",
+          ProviderKey = "test",
+        },
+      },
+    };
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Act
@@ -2333,8 +2357,13 @@ public class DynamoDbUserStoreTests
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    var user = new DynamoDbUser();
-    user.Claims.Add("test", new() { "test", "test2" });
+    var user = new DynamoDbUser
+    {
+      Claims = new()
+      {
+        { "test", new() { "test", "test2" } },
+      },
+    };
 
     // Act
     await userStore.CreateAsync(user, CancellationToken.None);
@@ -2404,10 +2433,9 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var tokens = await userStore.GetTokenAsync(
+    var token = await userStore.GetTokenAsync(
       user, loginProvider, name, CancellationToken.None);
-    Assert.NotNull(tokens);
-    Assert.Empty(tokens);
+    Assert.Null(token);
   }
 
   [Fact]
@@ -2702,5 +2730,57 @@ public class DynamoDbUserStoreTests
 
     // Assert
     Assert.False(result);
+  }
+
+  [Fact]
+  public async Task Should_NotRemoveAuthenticator_When_AddingClaims()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser();
+    await userStore.CreateAsync(user, CancellationToken.None);
+    await userStore.SetAuthenticatorKeyAsync(user, "test", CancellationToken.None);
+    await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Act
+    user = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
+    await userStore.AddClaimsAsync(user!, new[] { new Claim("test", "test") }, CancellationToken.None);
+    await userStore.UpdateAsync(user!, CancellationToken.None);
+
+    // Assert
+    user = await userStore.FindByIdAsync(user!.Id, CancellationToken.None);
+    var key = await userStore.GetAuthenticatorKeyAsync(user!, CancellationToken.None);
+    Assert.Equal("test", key);
+  }
+
+  [Fact]
+  public async Task Should_KeepOneAuthenticator_When_RemovingTheOtherAndAddingClaim()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser();
+    await userStore.CreateAsync(user, CancellationToken.None);
+    await userStore.SetTokenAsync(user, "Authenticator", "first", "test", CancellationToken.None);
+    await userStore.SetTokenAsync(user, "Authenticator", "second", "test", CancellationToken.None);
+    await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Act
+    user = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
+    await userStore.AddClaimsAsync(user!, new[] { new Claim("test", "test") }, CancellationToken.None);
+    await userStore.RemoveTokenAsync(user!, "Authenticator", "first", CancellationToken.None);
+    await userStore.UpdateAsync(user!, CancellationToken.None);
+
+    // Assert
+    user = await userStore.FindByIdAsync(user!.Id, CancellationToken.None);
+    var first = await userStore.GetTokenAsync(user!, "Authenticator", "first", CancellationToken.None);
+    var second = await userStore.GetTokenAsync(user!, "Authenticator", "second", CancellationToken.None);
+    var claims = await userStore.GetClaimsAsync(user!, CancellationToken.None);
+    Assert.Null(first);
+    Assert.NotNull(second);
+    Assert.Single(claims);
   }
 }
