@@ -86,12 +86,12 @@ public class DynamoDbUserStore<TUserEntity> :
     }
   }
 
-  public Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
+  public async Task AddLoginAsync(TUserEntity user, UserLoginInfo login, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     ArgumentNullException.ThrowIfNull(login);
 
-    user.Logins ??= new();
+    user.Logins = await GetRawLogins(user, cancellationToken);
 
     user.Logins.Add(new DynamoDbUserLogin
     {
@@ -100,8 +100,6 @@ public class DynamoDbUserStore<TUserEntity> :
       ProviderDisplayName = login.ProviderDisplayName,
       UserId = user.Id,
     });
-
-    return Task.CompletedTask;
   }
 
   public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
