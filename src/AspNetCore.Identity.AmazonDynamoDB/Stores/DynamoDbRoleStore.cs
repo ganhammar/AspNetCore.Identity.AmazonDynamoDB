@@ -26,7 +26,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     if (options.Database == default && database == default)
     {
-      throw new ArgumentNullException(nameof(options.Database));
+      throw new ArgumentNullException(nameof(database));
     }
 
     _client = database ?? options.Database!;

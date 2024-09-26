@@ -26,7 +26,7 @@ public class DynamoDbUserStoreTests
     var exception = Assert.Throws<ArgumentNullException>(() =>
       new DynamoDbUserStore<DynamoDbUser>(TestUtils.GetOptions(new())));
 
-    Assert.Equal("Database", exception.ParamName);
+    Assert.Equal("database", exception.ParamName);
   }
 
   [Fact]
@@ -275,6 +275,30 @@ public class DynamoDbUserStoreTests
 
     // Assert
     Assert.Single(user.Roles!);
+  }
+
+  [Fact]
+  public async Task Should_AddToSecondRole_When_UserExists()
+  {
+    // Arrange
+    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser();
+    var role = new DynamoDbUserRole
+    {
+      RoleName = "first",
+      UserId = user.Id,
+    };
+    await context.SaveAsync(role);
+
+    // Act
+    await userStore.AddToRoleAsync(
+      user, new("second"), CancellationToken.None);
+
+    // Assert
+    Assert.Equal(2, user.Roles!.Count);
   }
 
   [Fact]

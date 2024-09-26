@@ -43,7 +43,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (options.Database == default && database == default)
     {
-      throw new ArgumentNullException(nameof(options.Database));
+      throw new ArgumentNullException(nameof(database));
     }
 
     _client = database ?? options.Database!;
@@ -102,19 +102,19 @@ public class DynamoDbUserStore<TUserEntity> :
     });
   }
 
-  public Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
+  public async Task AddToRoleAsync(TUserEntity user, string roleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
     ArgumentNullException.ThrowIfNull(roleName);
 
-    user.Roles ??= new();
+    user.Roles ??= (await GetRawRoles(user, cancellationToken))
+      .Select(x => x.RoleName!)
+      .ToList();
 
     if (user.Roles.Contains(roleName) == false)
     {
       user.Roles.Add(roleName);
     }
-
-    return Task.CompletedTask;
   }
 
   public async Task<IdentityResult> CreateAsync(TUserEntity user, CancellationToken cancellationToken)

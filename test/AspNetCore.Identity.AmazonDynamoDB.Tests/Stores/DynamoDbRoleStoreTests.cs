@@ -23,7 +23,7 @@ public class DynamoDbRoleStoreTests
     var exception = Assert.Throws<ArgumentNullException>(() =>
         new DynamoDbRoleStore<DynamoDbRole>(TestUtils.GetOptions(new())));
 
-    Assert.Equal("Database", exception.ParamName);
+    Assert.Equal("database", exception.ParamName);
   }
 
   [Fact]
