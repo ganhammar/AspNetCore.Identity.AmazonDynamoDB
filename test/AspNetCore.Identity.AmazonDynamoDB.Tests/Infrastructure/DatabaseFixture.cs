@@ -1,14 +1,17 @@
 ﻿using Amazon.DynamoDBv2;
+using Amazon.Runtime;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
 public class DatabaseFixture : IDisposable
 {
   public static readonly string TableName = Guid.NewGuid().ToString();
-  public static readonly AmazonDynamoDBClient Client = new(new AmazonDynamoDBConfig
-  {
-    ServiceURL = "http://localhost:8000",
-  });
+  public static readonly AmazonDynamoDBClient Client = new(
+    new BasicAWSCredentials("test", "test"),
+    new AmazonDynamoDBConfig
+    {
+      ServiceURL = "http://localhost:8000",
+    });
   private bool _disposed;
 
   public DatabaseFixture()
