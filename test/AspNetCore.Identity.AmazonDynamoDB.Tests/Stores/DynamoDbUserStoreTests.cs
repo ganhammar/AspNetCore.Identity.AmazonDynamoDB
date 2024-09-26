@@ -208,6 +208,31 @@ public class DynamoDbUserStoreTests
   }
 
   [Fact]
+  public async Task Should_AddSecondLoginProvider_When_UserExists()
+  {
+    // Arrange
+    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser();
+    var login = new DynamoDbUserLogin
+    {
+      LoginProvider = "first",
+      ProviderKey = "first",
+      UserId = user.Id,
+    };
+    await context.SaveAsync(login);
+
+    // Act
+    await userStore.AddLoginAsync(
+      user, new("second", "second", "second"), CancellationToken.None);
+
+    // Assert
+    Assert.Equal(2, user.Logins!.Count);
+  }
+
+  [Fact]
   public async Task Should_ThrowException_When_TryingToAddRoleToAUserThatIsNull()
   {
     // Arrange
