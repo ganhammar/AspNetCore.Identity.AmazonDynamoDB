@@ -11,9 +11,9 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     IRoleClaimStore<TRoleEntity>
   where TRoleEntity : DynamoDbRole, new()
 {
-  private IAmazonDynamoDB _client;
-  private IDynamoDBContext _context;
-  private string _tableName;
+  private readonly IAmazonDynamoDB _client;
+  private readonly IDynamoDBContext _context;
+  private readonly string _tableName;
 
   public DynamoDbRoleStore(
     IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -95,7 +95,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
           { ":normalizedRoleName", normalizedRoleName },
         },
       },
-      Limit = 1
+      Limit = 1,
     });
     var roles = await search.GetRemainingAsync(cancellationToken);
     return roles?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
