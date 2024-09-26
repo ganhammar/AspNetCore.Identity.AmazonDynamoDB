@@ -16,7 +16,7 @@ public class DatabaseFixture : IDisposable
     CreateTable().GetAwaiter().GetResult();
   }
 
-  private async Task CreateTable()
+  private static async Task CreateTable()
   {
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(TestUtils.GetOptions(new()
     {

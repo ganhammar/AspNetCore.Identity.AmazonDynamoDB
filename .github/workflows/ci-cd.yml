@@ -36,13 +36,6 @@ jobs:
             echo "is_fork=false" >> $GITHUB_ENV
           fi
 
-      - name: Configure AWS Credentials
-        if: env.is_fork == 'false'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: eu-north-1
-          role-to-assume: ${{ secrets.DEPLOY_ROLE }}
-          role-session-name: OIDCSession
       - name: Setup DynamoDB Local
         run: docker run -d -p 8000:8000 amazon/dynamodb-local
 
