@@ -36,6 +36,13 @@ jobs:
             echo "is_fork=false" >> $GITHUB_ENV
           fi
 
+      - name: Configure AWS Credentials
+        if: env.is_fork == 'false'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-north-1
+          role-to-assume: ${{ secrets.DEPLOY_ROLE }}
+          role-session-name: OIDCSession
       - name: Setup DynamoDB Local
         run: docker run -d -p 8000:8000 amazon/dynamodb-local
 
@@ -45,7 +52,11 @@ jobs:
         run: dotnet build --no-restore
       - name: Lint
         run: dotnet format --verify-no-changes --no-restore
+      - name: Test (Main)
+        if: env.is_fork == 'false'
+        run: dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov
       - name: Test (Fork)
+        if: env.is_fork == 'true'
         run: dotnet test ./test/AspNetCore.Identity.AmazonDynamoDB.Tests --no-build
       - name: Publish Code Coverage
         uses: codecov/codecov-action@v4
