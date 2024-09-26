@@ -23,7 +23,12 @@ jobs:
             6.0.x
             8.0.x
 
+      - name: Check if PR is from a fork
+        id: check_fork
+        run: echo "::set-output name=is_fork::$(if [ '${{ github.event.pull_request.head.repo.full_name }}' != '${{ github.repository }}' ]; then echo 'true'; else echo 'false'; fi)"
+
       - name: Configure AWS Credentials
+        if: steps.check_fork.outputs.is_fork == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: eu-north-1
@@ -38,11 +43,15 @@ jobs:
         run: dotnet build --no-restore
       - name: Lint
         run: dotnet format --verify-no-changes --no-restore
-      - name: Test
+      - name: Test (Main)
+        if: steps.check_fork.outputs.is_fork == 'false'
         run: dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov
+      - name: Test (Fork)
+        if: steps.check_fork.outputs.is_fork == 'true'
+        run: dotnet test ./test/AspNetCore.Identity.AmazonDynamoDB.Tests --no-build
       - name: Publish Code Coverage
         uses: codecov/codecov-action@v4
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: ${{ github.actor != 'dependabot[bot]' && steps.check_fork.outputs.is_fork == 'false' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: test/**/TestResults/coverage.info

@@ -63,7 +63,7 @@ public class DynamoDbUserStore<TUserEntity> :
     if (user.Claims == default)
     {
       var rawClaims = await GetRawClaims(user, cancellationToken);
-      user.Claims = ToDictionary(rawClaims);
+      user.Claims = DynamoDbUserStore<TUserEntity>.ToDictionary(rawClaims);
     }
 
     DynamoDbUserStore<TUserEntity>.AddClaims(user, claims);
@@ -270,7 +270,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return await search.GetRemainingAsync(cancellationToken);
   }
 
-  private Dictionary<string, List<string>> ToDictionary(List<DynamoDbUserClaim> claims) => claims
+  private static Dictionary<string, List<string>> ToDictionary(List<DynamoDbUserClaim> claims) => claims
     .GroupBy(x => x.ClaimType)
     .ToDictionary(x => x.Key!, x => x.Select(y => y.ClaimValue!).ToList());
 
@@ -281,7 +281,7 @@ public class DynamoDbUserStore<TUserEntity> :
     if (user.Claims == default)
     {
       var claims = await GetRawClaims(user, cancellationToken);
-      user.Claims = ToDictionary(claims);
+      user.Claims = DynamoDbUserStore<TUserEntity>.ToDictionary(claims);
     }
 
     return DynamoDbUserStore<TUserEntity>.FlattenClaims(user)
@@ -314,7 +314,7 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    return Task.FromResult((DateTimeOffset?)user.LockoutEnd);
+    return Task.FromResult(user.LockoutEnd);
   }
 
   public async Task<List<DynamoDbUserLogin>> GetRawLogins(TUserEntity user, CancellationToken cancellationToken)
@@ -560,7 +560,7 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(user);
     ArgumentNullException.ThrowIfNull(claims);
 
-    user.Claims = user.Claims ?? ToDictionary(await GetRawClaims(user, cancellationToken));
+    user.Claims ??= DynamoDbUserStore<TUserEntity>.ToDictionary(await GetRawClaims(user, cancellationToken));
 
     foreach (var claim in claims)
     {
