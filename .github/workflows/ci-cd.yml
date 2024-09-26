@@ -25,7 +25,16 @@ jobs:
 
       - name: Check if PR is from a fork
         id: check_fork
-        run: echo "::set-output name=is_fork::$(if [ '${{ github.event.pull_request.head.repo.full_name }}' != '${{ github.repository }}' ]; then echo 'true'; else echo 'false'; fi)"
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+              echo "is_fork=true" >> $GITHUB_ENV
+            else
+              echo "is_fork=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "is_fork=false" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS Credentials
         if: steps.check_fork.outputs.is_fork == 'false'
