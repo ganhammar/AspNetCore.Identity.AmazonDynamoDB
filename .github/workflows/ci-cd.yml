@@ -27,17 +27,13 @@ jobs:
         id: check_fork
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
-              echo "is_fork=true" >> $GITHUB_ENV
-            else
-              echo "is_fork=false" >> $GITHUB_ENV
-            fi
+            echo "is_pull_request=true" >> $GITHUB_ENV
           else
-            echo "is_fork=false" >> $GITHUB_ENV
+            echo "is_pull_request=false" >> $GITHUB_ENV
           fi
 
       - name: Configure AWS Credentials
-        if: env.is_fork == 'false'
+        if: env.is_pull_request == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: eu-north-1
@@ -53,14 +49,14 @@ jobs:
       - name: Lint
         run: dotnet format --verify-no-changes --no-restore
       - name: Test (Main)
-        if: env.is_fork == 'false'
+        if: env.is_pull_request == 'false'
         run: dotnet test --no-build /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=lcov
-      - name: Test (Fork)
-        if: env.is_fork == 'true'
+      - name: Test (PR)
+        if: env.is_pull_request == 'true'
         run: dotnet test ./test/AspNetCore.Identity.AmazonDynamoDB.Tests --no-build
       - name: Publish Code Coverage
         uses: codecov/codecov-action@v4
-        if: ${{ github.actor != 'dependabot[bot]' && env.is_fork == 'false' }}
+        if: ${{ github.actor != 'dependabot[bot]' && env.is_pull_request == 'false' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: test/**/TestResults/coverage.info
