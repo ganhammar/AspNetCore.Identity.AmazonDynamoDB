@@ -27,7 +27,9 @@ public class DynamoDbUserStore<TUserEntity> :
 {
   private readonly IAmazonDynamoDB _client;
   private readonly IDynamoDBContext _context;
-  private readonly string _tableName;
+  private readonly IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
+  private string _tableName =>
+    _optionsMonitor.CurrentValue.DefaultTableName ?? Constants.DefaultTableName;
   private const string InternalLoginProvider = "[AspNetUserStore]";
   private const string AuthenticatorKeyTokenName = "AuthenticatorKey";
   private const string RecoveryCodeTokenName = "RecoveryCodes";
@@ -39,7 +41,6 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(optionsMonitor);
 
     var options = optionsMonitor.CurrentValue;
-    DynamoDbTableSetup.EnsureAliasCreated(options);
 
     if (options.Database == default && database == default)
     {
@@ -47,8 +48,8 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     _client = database ?? options.Database!;
+    _optionsMonitor = optionsMonitor;
     _context = new DynamoDBContext(_client);
-    _tableName = options.DefaultTableName ?? Constants.DefaultTableName;
   }
 
   public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)

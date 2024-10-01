@@ -13,7 +13,6 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 {
   private readonly IAmazonDynamoDB _client;
   private readonly IDynamoDBContext _context;
-  private readonly string _tableName;
 
   public DynamoDbRoleStore(
     IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -22,7 +21,6 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     ArgumentNullException.ThrowIfNull(optionsMonitor);
 
     var options = optionsMonitor.CurrentValue;
-    DynamoDbTableSetup.EnsureAliasCreated(options);
 
     if (options.Database == default && database == default)
     {
@@ -31,7 +29,6 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     _client = database ?? options.Database!;
     _context = new DynamoDBContext(_client);
-    _tableName = options.DefaultTableName ?? Constants.DefaultTableName;
   }
 
   public Task AddClaimAsync(TRoleEntity role, Claim claim, CancellationToken cancellationToken = default)

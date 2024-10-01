@@ -26,8 +26,13 @@ public static class DynamoDbTableSetup
   {
     if (options.DefaultTableName != Constants.DefaultTableName)
     {
+      if (AWSConfigsDynamoDB.Context.TableAliases.ContainsKey(Constants.DefaultTableName))
+      {
+        AWSConfigsDynamoDB.Context.TableAliases.Remove(Constants.DefaultTableName);
+      }
+
       AWSConfigsDynamoDB.Context.TableAliases
-        .TryAdd(Constants.DefaultTableName, options.DefaultTableName);
+        .Add(Constants.DefaultTableName, options.DefaultTableName);
     }
   }
 
