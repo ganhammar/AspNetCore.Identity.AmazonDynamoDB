@@ -1,7 +1,11 @@
 ﻿using System.Security.Claims;
+using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
@@ -2831,5 +2835,54 @@ public class DynamoDbUserStoreTests
     Assert.Null(first);
     Assert.NotNull(second);
     Assert.Single(claims);
+  }
+
+  [Fact]
+  public async Task Should_NotResolveUser_When_TableHasChanged()
+  {
+    // Arrange
+    var email = "test@test.com";
+    var user = new DynamoDbUser
+    {
+      Email = email,
+      NormalizedEmail = email.ToUpperInvariant(),
+    };
+
+    // Act
+    var host = Host.CreateDefaultBuilder()
+      .ConfigureServices(services => services
+        .AddSingleton<IOptionsMonitor<DynamoDbOptions>>(sp =>
+        {
+          var initialOptions = sp.GetRequiredService<IOptions<DynamoDbOptions>>().Value;
+          return new TestDynamoDbOptionsMonitor(initialOptions);
+        })
+        .AddSingleton<IAmazonDynamoDB>(sp => DatabaseFixture.Client)
+        .AddIdentityCore<DynamoDbUser>()
+        .AddRoles<DynamoDbRole>()
+        .AddDynamoDbStores()
+        .SetDefaultTableName(DatabaseFixture.TableName))
+      .Build();
+    await host.StartAsync();
+
+    var options = host.Services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>();
+    var database = host.Services.GetRequiredService<IAmazonDynamoDB>();
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options, database);
+    var userStore = host.Services.GetRequiredService<IUserStore<DynamoDbUser>>();
+    await userStore.CreateAsync(user, CancellationToken.None);
+
+    // Assert
+    var userManager = host.Services.GetRequiredService<UserManager<DynamoDbUser>>();
+    var beforeChange = await userManager.FindByEmailAsync(email);
+
+    Assert.NotNull(beforeChange);
+
+    var otherTable = $"not-the-fixed-table-name-{Guid.NewGuid()}";
+    (options as TestDynamoDbOptionsMonitor)!.UpdateOptions(new() { DefaultTableName = otherTable });
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options, database);
+
+    var afterChange = await userManager.FindByEmailAsync(email);
+    Assert.Null(afterChange);
+
+    await database.DeleteTableAsync(otherTable);
   }
 }

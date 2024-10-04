@@ -124,7 +124,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    await _context.SaveAsync(user, cancellationToken);
+    await _context.SaveAsync(user, GetOperationConfig(), cancellationToken);
     await SaveClaims(user, cancellationToken);
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
@@ -173,9 +173,10 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    });
+    },
+    GetOperationConfig());
     var users = await search.GetRemainingAsync(cancellationToken);
-    return users?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
+    return users.FirstOrDefault();
   }
 
   public async Task<TUserEntity?> FindByIdAsync(string userId, CancellationToken cancellationToken)
@@ -186,7 +187,7 @@ public class DynamoDbUserStore<TUserEntity> :
     {
       Id = userId,
     };
-    return await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, cancellationToken);
+    return await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, GetOperationConfig(), cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByLoginAsync(
@@ -208,7 +209,8 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    });
+    },
+    GetOperationConfig());
     var logins = await search.GetNextSetAsync(cancellationToken);
 
     if (logins.Any() == false || logins.First().UserId == default)
@@ -221,7 +223,7 @@ public class DynamoDbUserStore<TUserEntity> :
       Id = logins.First().UserId!,
     };
     return await _context.LoadAsync<TUserEntity>(
-      user.PartitionKey, user.SortKey, cancellationToken);
+      user.PartitionKey, user.SortKey, GetOperationConfig(), cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
@@ -240,9 +242,10 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    });
+    },
+    GetOperationConfig());
     var users = await search.GetRemainingAsync(cancellationToken);
-    return users?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
+    return users.FirstOrDefault();
   }
 
   public Task<int> GetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -265,7 +268,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "CLAIM#" },
         },
       },
-    });
+    },
+    GetOperationConfig());
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -329,7 +333,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "LOGIN#" },
         },
       },
-    });
+    },
+    GetOperationConfig());
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -399,7 +404,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "ROLE#" },
         },
       },
-    });
+    },
+    GetOperationConfig());
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -460,10 +466,11 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":claimValue", claim.Value },
         },
       },
-    });
+    },
+    GetOperationConfig());
     var userClaims = await search.GetRemainingAsync(cancellationToken);
 
-    var batch = _context.CreateBatchGet<TUserEntity>();
+    var batch = _context.CreateBatchGet<TUserEntity>(GetOperationConfig());
     foreach (var userId in userClaims.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
     {
       var user = new DynamoDbUser
@@ -493,10 +500,10 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":roleName", roleName },
         },
       },
-    });
+    }, GetOperationConfig());
     var userRoles = await search.GetRemainingAsync(cancellationToken);
 
-    var batch = _context.CreateBatchGet<TUserEntity>();
+    var batch = _context.CreateBatchGet<TUserEntity>(GetOperationConfig());
     foreach (var userId in userRoles.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
     {
       var user = new DynamoDbUser
@@ -548,7 +555,8 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1,
-    });
+    },
+    GetOperationConfig());
     var roles = await search.GetRemainingAsync(cancellationToken);
 
     return roles.Any();
@@ -703,7 +711,8 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(user);
 
     // Ensure no one else is updating
-    var databaseUser = await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, cancellationToken);
+    var databaseUser = await _context.LoadAsync<TUserEntity>(
+      user.PartitionKey, user.SortKey, GetOperationConfig(), cancellationToken);
     if (databaseUser == default || databaseUser.ConcurrencyStamp != user.ConcurrencyStamp)
     {
       return IdentityResult.Failed(new IdentityError
@@ -715,7 +724,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     user.ConcurrencyStamp = Guid.NewGuid().ToString();
 
-    await _context.SaveAsync(user, cancellationToken);
+    await _context.SaveAsync(user, GetOperationConfig(), cancellationToken);
     await SaveClaims(user, cancellationToken);
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
@@ -747,7 +756,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+      var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetOperationConfig());
 
       foreach (var claim in toBeDeleted)
       {
@@ -767,7 +776,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserClaim>();
+    var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetOperationConfig());
     var flattenClaims = DynamoDbUserStore<TUserEntity>.FlattenClaims(user);
 
     foreach (var claim in flattenClaims)
@@ -797,7 +806,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserLogin>();
+      var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetOperationConfig());
 
       foreach (var login in toBeDeleted)
       {
@@ -817,7 +826,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserLogin>();
+    var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetOperationConfig());
 
     foreach (var login in user.Logins!)
     {
@@ -846,7 +855,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserRole>();
+      var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetOperationConfig());
 
       foreach (var role in toBeDeleted)
       {
@@ -866,7 +875,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserRole>();
+    var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetOperationConfig());
 
     foreach (var role in user.Roles!)
     {
@@ -900,7 +909,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserToken>();
+      var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetOperationConfig());
 
       foreach (var token in toBeDeleted)
       {
@@ -920,7 +929,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserToken>();
+    var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetOperationConfig());
 
     foreach (var token in user.Tokens!)
     {
@@ -1046,7 +1055,7 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "TOKEN#" },
         },
       },
-    });
+    }, GetOperationConfig());
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -1071,6 +1080,11 @@ public class DynamoDbUserStore<TUserEntity> :
 
     return user.Tokens!.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
   }
+
+  private DynamoDBOperationConfig GetOperationConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
 
   protected virtual void Dispose(bool disposing)
   {

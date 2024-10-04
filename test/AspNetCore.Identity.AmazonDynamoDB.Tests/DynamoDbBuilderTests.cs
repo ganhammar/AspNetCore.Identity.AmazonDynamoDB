@@ -188,7 +188,7 @@ public class DynamoDbBuilderTests
     await host.StartAsync();
     var serviceProvider = host.Services;
     var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>();
-    (options as TestDynamoDbOptionsMonitor)!.UpdateOptions(new DynamoDbOptions { DefaultTableName = tableName });
+    (options as TestDynamoDbOptionsMonitor)!.UpdateOptions(new() { DefaultTableName = tableName });
 
     // Assert
     Assert.Equal(tableName, options.CurrentValue.DefaultTableName);

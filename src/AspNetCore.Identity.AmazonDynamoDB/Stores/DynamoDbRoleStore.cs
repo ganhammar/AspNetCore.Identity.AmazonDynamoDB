@@ -13,6 +13,9 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 {
   private readonly IAmazonDynamoDB _client;
   private readonly IDynamoDBContext _context;
+  private readonly IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
+  private string _tableName =>
+    _optionsMonitor.CurrentValue.DefaultTableName ?? Constants.DefaultTableName;
 
   public DynamoDbRoleStore(
     IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -28,6 +31,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     }
 
     _client = database ?? options.Database!;
+    _optionsMonitor = optionsMonitor;
     _context = new DynamoDBContext(_client);
   }
 
@@ -52,7 +56,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    await _context.SaveAsync(role, cancellationToken);
+    await _context.SaveAsync(role, GetOperationConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -61,7 +65,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    await _context.DeleteAsync(role, cancellationToken);
+    await _context.DeleteAsync(role, GetOperationConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -74,7 +78,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     {
       Id = roleId,
     };
-    return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, cancellationToken);
+    return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, GetOperationConfig(), cancellationToken);
   }
 
   public async Task<TRoleEntity?> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
@@ -93,7 +97,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
         },
       },
       Limit = 1,
-    });
+    },
+    GetOperationConfig());
     var roles = await search.GetRemainingAsync(cancellationToken);
     return roles?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
   }
@@ -171,7 +176,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     ArgumentNullException.ThrowIfNull(role);
 
     // Ensure no one else is updating
-    var databaseApplication = await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, cancellationToken);
+    var databaseApplication = await _context.LoadAsync<TRoleEntity>(
+      role.PartitionKey, role.SortKey, GetOperationConfig(), cancellationToken);
     if (databaseApplication == default || databaseApplication.ConcurrencyStamp != role.ConcurrencyStamp)
     {
       return IdentityResult.Failed(new IdentityError
@@ -183,10 +189,15 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     role.ConcurrencyStamp = Guid.NewGuid().ToString();
 
-    await _context.SaveAsync(role, cancellationToken);
+    await _context.SaveAsync(role, GetOperationConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
+
+  private DynamoDBOperationConfig GetOperationConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
 
   protected virtual void Dispose(bool disposing)
   {
