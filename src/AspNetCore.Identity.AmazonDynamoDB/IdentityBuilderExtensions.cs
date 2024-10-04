@@ -26,6 +26,6 @@ public static class IdentityBuilderExtensions
       services.TryAddSingleton(typeof(IRoleStore<>).MakeGenericType(roleType), roleStoreType);
     }
 
-    services.TryAddSingleton<DynamoDbOptionsMonitor>();
+    services.AddActivatedSingleton<DynamoDbOptionsMonitor>();
   }
 }

@@ -17,6 +17,9 @@ public class DynamoDbOptionsMonitor
       DynamoDbTableSetup.EnsureAliasCreated(_optionsMonitor.CurrentValue);
     }
 
-    _optionsMonitor.OnChange((options, _) => DynamoDbTableSetup.EnsureAliasCreated(options));
+    _optionsMonitor.OnChange((options, _) =>
+    {
+      DynamoDbTableSetup.EnsureAliasCreated(options);
+    });
   }
 }

@@ -1,6 +1,8 @@
-﻿using Amazon.DynamoDBv2;
+﻿using Amazon;
+using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -144,6 +146,57 @@ public class DynamoDbBuilderTests
     Assert.Equal(throughput, options.ProvisionedThroughput);
   }
 
+  [Fact]
+  public async Task Should_SetTableAlias_When_SettingDefaultTableName()
+  {
+    // Arrange
+    var tableName = "test";
+
+    // Act
+    var host = Host.CreateDefaultBuilder()
+      .ConfigureServices(services => CreateBuilder(services).SetDefaultTableName(tableName))
+      .Build();
+    await host.StartAsync();
+
+    // Assert
+    var serviceProvider = host.Services;
+    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
+    Assert.Equal(tableName, options.DefaultTableName);
+    Assert.True(AWSConfigsDynamoDB.Context.TableAliases.ContainsKey("identity"));
+    Assert.Equal(tableName, AWSConfigsDynamoDB.Context.TableAliases["identity"]);
+    await host.StopAsync();
+  }
+
+  [Fact]
+  public async Task Should_UpdateAlias_When_SettingsChanges()
+  {
+    // Arrange
+    var tableName = "test";
+
+    // Act
+    var host = Host.CreateDefaultBuilder()
+      .ConfigureServices(services =>
+      {
+        CreateBuilder(services);
+        services.AddSingleton<IOptionsMonitor<DynamoDbOptions>>(sp =>
+        {
+          var initialOptions = sp.GetRequiredService<IOptions<DynamoDbOptions>>().Value;
+          return new TestDynamoDbOptionsMonitor(initialOptions);
+        });
+      })
+      .Build();
+    await host.StartAsync();
+    var serviceProvider = host.Services;
+    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>();
+    (options as TestDynamoDbOptionsMonitor)!.UpdateOptions(new DynamoDbOptions { DefaultTableName = tableName });
+
+    // Assert
+    Assert.Equal(tableName, options.CurrentValue.DefaultTableName);
+    Assert.True(AWSConfigsDynamoDB.Context.TableAliases.ContainsKey("identity"));
+    Assert.Equal(tableName, AWSConfigsDynamoDB.Context.TableAliases["identity"]);
+    await host.StopAsync();
+  }
+
   private static DynamoDbBuilder CreateBuilder(IServiceCollection services)
-      => services.AddIdentityCore<DynamoDbUser>().AddRoles<DynamoDbRole>().AddDynamoDbStores();
+    => services.AddIdentityCore<DynamoDbUser>().AddRoles<DynamoDbRole>().AddDynamoDbStores();
 }
