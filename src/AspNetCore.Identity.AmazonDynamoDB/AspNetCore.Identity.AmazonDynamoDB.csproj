@@ -21,7 +21,7 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.402.11" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="8.10.0" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.0" />
   </ItemGroup>
 
 </Project>
