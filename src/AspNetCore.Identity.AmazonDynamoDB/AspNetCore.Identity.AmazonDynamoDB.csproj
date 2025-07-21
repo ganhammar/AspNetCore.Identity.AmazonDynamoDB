@@ -19,9 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.406.17" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="9.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.3" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="9.7.0" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.7" />
   </ItemGroup>
 
 </Project>
