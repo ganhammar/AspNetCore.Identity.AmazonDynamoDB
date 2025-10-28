@@ -100,7 +100,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
         },
       },
       Limit = 1,
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     var roles = await search.GetRemainingAsync(cancellationToken);
     return roles?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
   }

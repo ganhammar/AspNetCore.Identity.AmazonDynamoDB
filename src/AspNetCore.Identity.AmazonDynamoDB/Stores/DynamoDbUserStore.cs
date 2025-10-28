@@ -164,7 +164,6 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(normalizedEmail);
 
 #pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
     {
       IndexName = "NormalizedEmail-index",
@@ -178,7 +177,6 @@ public class DynamoDbUserStore<TUserEntity> :
       },
       Limit = 1
     }, GetOperationConfig());
-#pragma warning restore CS0618
 #pragma warning restore CS0618
     var users = await search.GetRemainingAsync(cancellationToken);
     return users.FirstOrDefault();
@@ -215,7 +213,8 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     var logins = await search.GetNextSetAsync(cancellationToken);
 
     if (logins.Any() == false || logins.First().UserId == default)
@@ -248,7 +247,8 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     var users = await search.GetRemainingAsync(cancellationToken);
     return users.FirstOrDefault();
   }
@@ -274,7 +274,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "CLAIM#" },
         },
       },
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -339,7 +340,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "LOGIN#" },
         },
       },
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -410,7 +412,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "ROLE#" },
         },
       },
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -472,7 +475,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":claimValue", claim.Value },
         },
       },
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     var userClaims = await search.GetRemainingAsync(cancellationToken);
 
     var batch = _context.CreateBatchGet<TUserEntity>(GetBatchGetConfig());
@@ -506,7 +510,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":roleName", roleName },
         },
       },
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     var userRoles = await search.GetRemainingAsync(cancellationToken);
 
     var batch = _context.CreateBatchGet<TUserEntity>(GetBatchGetConfig());
@@ -562,7 +567,8 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1,
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     var roles = await search.GetRemainingAsync(cancellationToken);
 
     return roles.Any();
@@ -1062,7 +1068,8 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "TOKEN#" },
         },
       },
-    });
+    }, GetOperationConfig());
+#pragma warning restore CS0618
     return await search.GetRemainingAsync(cancellationToken);
   }
 
