@@ -49,7 +49,9 @@ public class DynamoDbUserStore<TUserEntity> :
 
     _client = database ?? options.Database!;
     _optionsMonitor = optionsMonitor;
-    _context = new DynamoDBContext(_client);
+    _context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => _client)
+      .Build();
   }
 
   public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
@@ -124,7 +126,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    await _context.SaveAsync(user, GetOperationConfig(), cancellationToken);
+    await _context.SaveAsync(user, GetSaveConfig(), cancellationToken);
     await SaveClaims(user, cancellationToken);
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
@@ -161,6 +163,8 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(normalizedEmail);
 
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
     {
       IndexName = "NormalizedEmail-index",
@@ -173,8 +177,9 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    },
-    GetOperationConfig());
+    }, GetOperationConfig());
+#pragma warning restore CS0618
+#pragma warning restore CS0618
     var users = await search.GetRemainingAsync(cancellationToken);
     return users.FirstOrDefault();
   }
@@ -187,7 +192,7 @@ public class DynamoDbUserStore<TUserEntity> :
     {
       Id = userId,
     };
-    return await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, GetOperationConfig(), cancellationToken);
+    return await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByLoginAsync(
@@ -196,6 +201,7 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(loginProvider);
     ArgumentNullException.ThrowIfNull(providerKey);
 
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
     {
       IndexName = "LoginProvider-ProviderKey-index",
@@ -209,8 +215,7 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    },
-    GetOperationConfig());
+    });
     var logins = await search.GetNextSetAsync(cancellationToken);
 
     if (logins.Any() == false || logins.First().UserId == default)
@@ -223,13 +228,14 @@ public class DynamoDbUserStore<TUserEntity> :
       Id = logins.First().UserId!,
     };
     return await _context.LoadAsync<TUserEntity>(
-      user.PartitionKey, user.SortKey, GetOperationConfig(), cancellationToken);
+      user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedUserName);
 
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
     {
       IndexName = "NormalizedUserName-index",
@@ -242,8 +248,7 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1
-    },
-    GetOperationConfig());
+    });
     var users = await search.GetRemainingAsync(cancellationToken);
     return users.FirstOrDefault();
   }
@@ -257,6 +262,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
   private async Task<List<DynamoDbUserClaim>> GetRawClaims(TUserEntity user, CancellationToken cancellationToken)
   {
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
     {
       KeyExpression = new Expression
@@ -268,8 +274,7 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "CLAIM#" },
         },
       },
-    },
-    GetOperationConfig());
+    });
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -322,6 +327,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
   public async Task<List<DynamoDbUserLogin>> GetRawLogins(TUserEntity user, CancellationToken cancellationToken)
   {
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
     {
       KeyExpression = new Expression
@@ -333,8 +339,7 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "LOGIN#" },
         },
       },
-    },
-    GetOperationConfig());
+    });
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -393,6 +398,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
   public async Task<List<DynamoDbUserRole>> GetRawRoles(TUserEntity user, CancellationToken cancellationToken)
   {
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
     {
       KeyExpression = new Expression
@@ -404,8 +410,7 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "ROLE#" },
         },
       },
-    },
-    GetOperationConfig());
+    });
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -454,6 +459,7 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(claim);
 
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
     {
       IndexName = "ClaimType-ClaimValue-index",
@@ -466,11 +472,10 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":claimValue", claim.Value },
         },
       },
-    },
-    GetOperationConfig());
+    });
     var userClaims = await search.GetRemainingAsync(cancellationToken);
 
-    var batch = _context.CreateBatchGet<TUserEntity>(GetOperationConfig());
+    var batch = _context.CreateBatchGet<TUserEntity>(GetBatchGetConfig());
     foreach (var userId in userClaims.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
     {
       var user = new DynamoDbUser
@@ -489,6 +494,7 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(roleName);
 
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
     {
       IndexName = "RoleName-index",
@@ -500,10 +506,10 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":roleName", roleName },
         },
       },
-    }, GetOperationConfig());
+    });
     var userRoles = await search.GetRemainingAsync(cancellationToken);
 
-    var batch = _context.CreateBatchGet<TUserEntity>(GetOperationConfig());
+    var batch = _context.CreateBatchGet<TUserEntity>(GetBatchGetConfig());
     foreach (var userId in userRoles.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
     {
       var user = new DynamoDbUser
@@ -543,6 +549,7 @@ public class DynamoDbUserStore<TUserEntity> :
       UserId = user.Id,
       RoleName = roleName,
     };
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
     {
       KeyExpression = new Expression
@@ -555,8 +562,7 @@ public class DynamoDbUserStore<TUserEntity> :
         },
       },
       Limit = 1,
-    },
-    GetOperationConfig());
+    });
     var roles = await search.GetRemainingAsync(cancellationToken);
 
     return roles.Any();
@@ -712,7 +718,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     // Ensure no one else is updating
     var databaseUser = await _context.LoadAsync<TUserEntity>(
-      user.PartitionKey, user.SortKey, GetOperationConfig(), cancellationToken);
+      user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
     if (databaseUser == default || databaseUser.ConcurrencyStamp != user.ConcurrencyStamp)
     {
       return IdentityResult.Failed(new IdentityError
@@ -724,7 +730,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     user.ConcurrencyStamp = Guid.NewGuid().ToString();
 
-    await _context.SaveAsync(user, GetOperationConfig(), cancellationToken);
+    await _context.SaveAsync(user, GetSaveConfig(), cancellationToken);
     await SaveClaims(user, cancellationToken);
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
@@ -756,7 +762,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetOperationConfig());
+      var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetBatchWriteConfig());
 
       foreach (var claim in toBeDeleted)
       {
@@ -776,7 +782,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetOperationConfig());
+    var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetBatchWriteConfig());
     var flattenClaims = DynamoDbUserStore<TUserEntity>.FlattenClaims(user);
 
     foreach (var claim in flattenClaims)
@@ -806,7 +812,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetOperationConfig());
+      var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetBatchWriteConfig());
 
       foreach (var login in toBeDeleted)
       {
@@ -826,7 +832,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetOperationConfig());
+    var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetBatchWriteConfig());
 
     foreach (var login in user.Logins!)
     {
@@ -855,7 +861,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetOperationConfig());
+      var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetBatchWriteConfig());
 
       foreach (var role in toBeDeleted)
       {
@@ -875,7 +881,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetOperationConfig());
+    var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetBatchWriteConfig());
 
     foreach (var role in user.Roles!)
     {
@@ -909,7 +915,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
     if (toBeDeleted.Any())
     {
-      var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetOperationConfig());
+      var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetBatchWriteConfig());
 
       foreach (var token in toBeDeleted)
       {
@@ -929,7 +935,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetOperationConfig());
+    var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetBatchWriteConfig());
 
     foreach (var token in user.Tokens!)
     {
@@ -1044,6 +1050,7 @@ public class DynamoDbUserStore<TUserEntity> :
 
   private async Task<List<DynamoDbUserToken>> GetRawTokens(TUserEntity user, CancellationToken cancellationToken)
   {
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<DynamoDbUserToken>(new QueryOperationConfig
     {
       KeyExpression = new Expression
@@ -1055,7 +1062,7 @@ public class DynamoDbUserStore<TUserEntity> :
           { ":sortKey", "TOKEN#" },
         },
       },
-    }, GetOperationConfig());
+    });
     return await search.GetRemainingAsync(cancellationToken);
   }
 
@@ -1065,7 +1072,7 @@ public class DynamoDbUserStore<TUserEntity> :
     {
       var tokens = await GetRawTokens(user, cancellationToken);
 
-      user.Tokens = tokens
+      user.Tokens = [.. tokens
         .Where(x => x.LoginProvider != default)
         .Where(x => x.Name != default)
         .Select(x => new IdentityUserToken<string>
@@ -1074,14 +1081,33 @@ public class DynamoDbUserStore<TUserEntity> :
           Name = x.Name!,
           UserId = x.UserId!,
           Value = x.Value,
-        })
-        .ToList();
+        })];
     }
 
     return user.Tokens!.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
   }
 
   private DynamoDBOperationConfig GetOperationConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private SaveConfig GetSaveConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private LoadConfig GetLoadConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private BatchGetConfig GetBatchGetConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private BatchWriteConfig GetBatchWriteConfig() => new()
   {
     OverrideTableName = _tableName,
   };

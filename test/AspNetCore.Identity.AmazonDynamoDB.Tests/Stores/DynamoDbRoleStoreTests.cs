@@ -39,8 +39,10 @@ public class DynamoDbRoleStoreTests
     await roleStore.CreateAsync(role, CancellationToken.None);
 
     // Assert
-    var context = new DynamoDBContext(DatabaseFixture.Client);
-    var dbRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
+    var dbRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.NotNull(dbRole);
   }
 
@@ -62,7 +64,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_CreateRole_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -75,7 +79,7 @@ public class DynamoDbRoleStoreTests
     await roleStore.CreateAsync(role, CancellationToken.None);
 
     // Assert
-    var databaseRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey);
+    var databaseRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.NotNull(databaseRole);
     Assert.Equal(role.Name, databaseRole.Name);
   }
@@ -98,7 +102,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_DeleteRole_When_ParametersIsCorrect()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -106,13 +112,13 @@ public class DynamoDbRoleStoreTests
     {
       Name = "test",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await roleStore.DeleteAsync(role, CancellationToken.None);
 
     // Assert
-    var dbRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey);
+    var dbRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.Null(dbRole);
   }
 
@@ -148,12 +154,14 @@ public class DynamoDbRoleStoreTests
   public async Task Should_AddClaim_When_RequestIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var role = new DynamoDbRole();
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var claimType = "test";
     var claimValue = "test";
@@ -170,14 +178,16 @@ public class DynamoDbRoleStoreTests
   public async Task Should_AddValueToClaim_When_ClaimAlreadyExists()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var claimType = "test";
     var role = new DynamoDbRole();
     role.Claims.Add(claimType, new() { "testicles" });
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var claimValue = "test";
 
@@ -222,7 +232,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_ReturnRole_When_FindingById()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -230,7 +242,7 @@ public class DynamoDbRoleStoreTests
     {
       Name = "test@test.se",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var foundRole = await roleStore.FindByIdAsync(role.Id, CancellationToken.None);
@@ -272,7 +284,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_ReturnRole_When_FindingByName()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -281,7 +295,7 @@ public class DynamoDbRoleStoreTests
       Name = "test",
       NormalizedName = "TEST",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var foundRole = await roleStore.FindByNameAsync(role.NormalizedName, CancellationToken.None);
@@ -308,7 +322,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_ReturnClaims_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -316,7 +332,7 @@ public class DynamoDbRoleStoreTests
     role.Claims.Add("test", new() { "test" });
     role.Claims.Add("test2", new() { "test2" });
     role.Claims.Add("test3", new() { "test3" });
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var claims = await roleStore.GetClaimsAsync(role, CancellationToken.None);
@@ -343,7 +359,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_ReturnNormalizedRoleName_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -351,7 +369,7 @@ public class DynamoDbRoleStoreTests
     {
       NormalizedName = "TEST",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var name = await roleStore.GetNormalizedRoleNameAsync(role, CancellationToken.None);
@@ -378,7 +396,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_ReturnId_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -386,7 +406,7 @@ public class DynamoDbRoleStoreTests
     {
       Id = Guid.NewGuid().ToString(),
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var id = await roleStore.GetRoleIdAsync(role, CancellationToken.None);
@@ -413,7 +433,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_ReturnName_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -421,7 +443,7 @@ public class DynamoDbRoleStoreTests
     {
       Name = "test",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var id = await roleStore.GetRoleNameAsync(role, CancellationToken.None);
@@ -448,13 +470,15 @@ public class DynamoDbRoleStoreTests
   public async Task Should_RemoveClaim_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var role = new DynamoDbRole();
     role.Claims.Add("test", new() { "test" });
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await roleStore.RemoveClaimAsync(
@@ -468,13 +492,15 @@ public class DynamoDbRoleStoreTests
   public async Task Should_NotRemoveClaim_When_ClaimValueDoesntExist()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var role = new DynamoDbRole();
     role.Claims.Add("test", new() { "test" });
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await roleStore.RemoveClaimAsync(
@@ -488,13 +514,15 @@ public class DynamoDbRoleStoreTests
   public async Task Should_KeepClaim_When_ClaimHasMultipleValues()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var role = new DynamoDbRole();
     role.Claims.Add("test", new() { "test", "testicles" });
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await roleStore.RemoveClaimAsync(
@@ -530,7 +558,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_SetNormalizedName_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -538,7 +568,7 @@ public class DynamoDbRoleStoreTests
     {
       NormalizedName = "TEST",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await roleStore.SetNormalizedRoleNameAsync(role, "TESTICLES", CancellationToken.None);
@@ -571,7 +601,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_SetName_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -579,7 +611,7 @@ public class DynamoDbRoleStoreTests
     {
       Name = "test",
     };
-    await context.SaveAsync(role);
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await roleStore.SetRoleNameAsync(role, "testicles", CancellationToken.None);
@@ -641,7 +673,9 @@ public class DynamoDbRoleStoreTests
   public async Task Should_UpdateRole_When_RoleIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -653,7 +687,7 @@ public class DynamoDbRoleStoreTests
     await roleStore.UpdateAsync(role, CancellationToken.None);
 
     // Assert
-    var databaseRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey);
+    var databaseRole = await context.LoadAsync<DynamoDbRole>(role.PartitionKey, role.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.NotNull(databaseRole);
     Assert.Equal(databaseRole.Name, role.Name);
   }
