@@ -46,8 +46,10 @@ public class DynamoDbUserStoreTests
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Assert
-    var context = new DynamoDBContext(DatabaseFixture.Client);
-    var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
+    var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.NotNull(dbUser);
   }
 
@@ -69,7 +71,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_CreateUser_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -82,7 +86,7 @@ public class DynamoDbUserStoreTests
     await userStore.CreateAsync(user, CancellationToken.None);
 
     // Assert
-    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
+    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.NotNull(databaseUser);
     Assert.Equal(user.UserName, databaseUser.UserName);
   }
@@ -215,7 +219,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_AddSecondLoginProvider_When_UserExists()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -285,7 +291,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_AddToSecondRole_When_UserExists()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -323,7 +331,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_DeleteUser_When_ParametersIsCorrect()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -331,13 +341,13 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await userStore.DeleteAsync(user, CancellationToken.None);
 
     // Assert
-    var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
+    var dbUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.Null(dbUser);
   }
 
@@ -345,7 +355,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_DeleteUserWithClaims_When_ParametersIsCorrect()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -353,7 +365,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var claims = new List<Claim>();
     for (var i = 0; i < 5; i++)
@@ -420,7 +432,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUser_When_FindingByEmail()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -429,7 +443,7 @@ public class DynamoDbUserStoreTests
       Email = "test-unique-email@testuniqum.se",
       NormalizedEmail = "TEST-UNIQUE-EMAIL@TESTUNIQUM.SE",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var foundUser = await userStore.FindByEmailAsync(user.NormalizedEmail, CancellationToken.None);
@@ -471,7 +485,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUser_When_FindingById()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -479,7 +495,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var foundUser = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
@@ -492,7 +508,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnCustomerUser_When_FindingById()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<CustomUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -501,7 +519,7 @@ public class DynamoDbUserStoreTests
       Email = "test@test.se",
       ProfilePictureUrl = "https://test.se/my-beautiful-profile-picture.png",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var foundUser = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
@@ -559,7 +577,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUser_When_FindingByLogin()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -567,7 +587,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
     var login = new DynamoDbUserLogin
     {
       LoginProvider = "test",
@@ -617,7 +637,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUser_When_FindingByName()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -626,7 +648,7 @@ public class DynamoDbUserStoreTests
       UserName = "test-unique-name",
       NormalizedUserName = "TEST-UNIQUE-NAME",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var foundUser = await userStore.FindByNameAsync(user.NormalizedUserName, CancellationToken.None);
@@ -653,7 +675,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnAccessFailedCount_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -661,7 +685,7 @@ public class DynamoDbUserStoreTests
     {
       AccessFailedCount = 10,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetAccessFailedCountAsync(user, CancellationToken.None);
@@ -688,7 +712,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnEmail_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -696,7 +722,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetEmailAsync(user, CancellationToken.None);
@@ -723,7 +749,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnEmailConfirmed_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -731,7 +759,7 @@ public class DynamoDbUserStoreTests
     {
       EmailConfirmed = true,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetEmailConfirmedAsync(user, CancellationToken.None);
@@ -758,7 +786,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnLockoutEnabled_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -766,7 +796,7 @@ public class DynamoDbUserStoreTests
     {
       LockoutEnabled = true,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetLockoutEnabledAsync(user, CancellationToken.None);
@@ -793,7 +823,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnLockoutEnd_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -801,7 +833,7 @@ public class DynamoDbUserStoreTests
     {
       LockoutEnd = DateTime.UtcNow,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetLockoutEndDateAsync(user, CancellationToken.None);
@@ -828,7 +860,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnNormalizedEmail_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -836,7 +870,7 @@ public class DynamoDbUserStoreTests
     {
       NormalizedEmail = "TEST@TEST.SE",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetNormalizedEmailAsync(user, CancellationToken.None);
@@ -863,7 +897,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnNormalizedUserName_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -871,7 +907,7 @@ public class DynamoDbUserStoreTests
     {
       NormalizedUserName = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetNormalizedUserNameAsync(user, CancellationToken.None);
@@ -898,7 +934,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnLogins_When_ListingThem()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -906,7 +944,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var loginCount = 10;
     for (var index = 0; index < loginCount; index++)
@@ -945,7 +983,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnRoles_When_ListingThem()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -953,7 +993,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var loginCount = 10;
     for (var index = 0; index < loginCount; index++)
@@ -991,7 +1031,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnPasswordHash_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -999,7 +1041,7 @@ public class DynamoDbUserStoreTests
     {
       PasswordHash = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetPasswordHashAsync(user, CancellationToken.None);
@@ -1026,7 +1068,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnPhoneNumber_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1034,7 +1078,7 @@ public class DynamoDbUserStoreTests
     {
       PhoneNumber = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetPhoneNumberAsync(user, CancellationToken.None);
@@ -1061,7 +1105,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnPhoneNumberConfirmed_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1069,7 +1115,7 @@ public class DynamoDbUserStoreTests
     {
       PhoneNumberConfirmed = true,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetPhoneNumberConfirmedAsync(user, CancellationToken.None);
@@ -1096,7 +1142,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnSecurityStamp_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1104,7 +1152,7 @@ public class DynamoDbUserStoreTests
     {
       SecurityStamp = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetSecurityStampAsync(user, CancellationToken.None);
@@ -1131,7 +1179,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnTwoFactorEnabled_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1139,7 +1189,7 @@ public class DynamoDbUserStoreTests
     {
       TwoFactorEnabled = true,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetTwoFactorEnabledAsync(user, CancellationToken.None);
@@ -1166,7 +1216,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUserId_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1174,7 +1226,7 @@ public class DynamoDbUserStoreTests
     {
       Id = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetUserIdAsync(user, CancellationToken.None);
@@ -1201,7 +1253,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUserName_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1209,7 +1263,7 @@ public class DynamoDbUserStoreTests
     {
       UserName = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.GetUserNameAsync(user, CancellationToken.None);
@@ -1236,7 +1290,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnTrue_When_UserHasPassword()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1244,7 +1300,7 @@ public class DynamoDbUserStoreTests
     {
       PasswordHash = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.HasPasswordAsync(user, CancellationToken.None);
@@ -1271,7 +1327,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_IncrementAccessFailedCount_When_Requested()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1279,7 +1337,7 @@ public class DynamoDbUserStoreTests
     {
       AccessFailedCount = 5,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var value = await userStore.IncrementAccessFailedCountAsync(user, CancellationToken.None);
@@ -1308,12 +1366,14 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnExpected_When_CheckingIfUserIsInRole(string roleName, bool expectedResult)
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var user = new DynamoDbUser();
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
     var userRoles = new DynamoDbUserRole
     {
       RoleName = "test",
@@ -1346,7 +1406,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetEmail_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1354,7 +1416,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var email = "testing@test.se";
@@ -1382,7 +1444,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetEmailConfirmed_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1390,7 +1454,7 @@ public class DynamoDbUserStoreTests
     {
       EmailConfirmed = true,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var emailConfirmed = true;
@@ -1419,7 +1483,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetLockoutEnabled_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1427,7 +1493,7 @@ public class DynamoDbUserStoreTests
     {
       LockoutEnabled = true,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var emailConfirmed = true;
@@ -1456,7 +1522,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetLockoutEndDate_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1464,7 +1532,7 @@ public class DynamoDbUserStoreTests
     {
       LockoutEnd = default,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var lockoutEnd = DateTimeOffset.Now;
@@ -1493,7 +1561,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetNormalizedEmail_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1501,7 +1571,7 @@ public class DynamoDbUserStoreTests
     {
       NormalizedEmail = "TEST@TEST.SE",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var normalizedEmail = "TESTING@TEST.SE";
@@ -1530,7 +1600,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetNormalizedUserName_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1538,7 +1610,7 @@ public class DynamoDbUserStoreTests
     {
       NormalizedUserName = "TEST",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var normalizedUserName = "TESTING";
@@ -1567,7 +1639,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetPasswordHash_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1575,7 +1649,7 @@ public class DynamoDbUserStoreTests
     {
       PasswordHash = "Secret",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var passwordHash = "Even-More-Secret";
@@ -1604,7 +1678,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetPhoneNumber_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1612,7 +1688,7 @@ public class DynamoDbUserStoreTests
     {
       PhoneNumber = "1111111",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var phoneNumber = "2222222";
@@ -1641,7 +1717,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetPhoneNumberConfirmed_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1649,7 +1727,7 @@ public class DynamoDbUserStoreTests
     {
       PhoneNumberConfirmed = false,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var phoneNumberConfirmed = true;
@@ -1678,7 +1756,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetTwoFactorEnabled_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1686,7 +1766,7 @@ public class DynamoDbUserStoreTests
     {
       TwoFactorEnabled = false,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var phoneNumberConfirmed = true;
@@ -1715,7 +1795,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetSecurityStamp_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1723,7 +1805,7 @@ public class DynamoDbUserStoreTests
     {
       SecurityStamp = "some-string",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var securityStamp = "some-other-string";
@@ -1752,7 +1834,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_SetUserName_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1760,7 +1844,7 @@ public class DynamoDbUserStoreTests
     {
       UserName = "some-user",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     var userName = "some-other-user";
@@ -1789,7 +1873,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnClaims_When_ListingThem()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1797,7 +1883,7 @@ public class DynamoDbUserStoreTests
     {
       Email = "test@test.se",
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var claimsCount = 10;
     for (var index = 0; index < claimsCount; index++)
@@ -1836,7 +1922,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUsers_When_ListingThemByRoleName()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1849,7 +1937,7 @@ public class DynamoDbUserStoreTests
       {
         Email = "test@test.se",
       };
-      await context.SaveAsync(user);
+      await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
       var login = new DynamoDbUserRole
       {
         RoleName = roleName,
@@ -1883,7 +1971,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ResetAccessFailedCount_When_Requested()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -1891,7 +1981,7 @@ public class DynamoDbUserStoreTests
     {
       AccessFailedCount = 5,
     };
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     // Act
     await userStore.ResetAccessFailedCountAsync(user, CancellationToken.None);
@@ -1932,12 +2022,14 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveClaims_When_RequestIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var user = new DynamoDbUser();
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var claims = new List<Claim>();
     for (var i = 0; i < 5; i++)
@@ -1993,12 +2085,14 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveUserFromRole_When_RequestIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var user = new DynamoDbUser();
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
     var roleName = "test";
     var userRole = new DynamoDbUserRole
     {
@@ -2060,12 +2154,14 @@ public class DynamoDbUserStoreTests
   public async Task Should_RemoveLoginFromUser_When_RequestIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     var user = new DynamoDbUser();
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
     var loginProvider = "test";
     var providerKey = Guid.NewGuid().ToString();
     var userRole = new DynamoDbUserLogin
@@ -2101,7 +2197,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReturnUsers_When_ListingThemByClaim()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2112,7 +2210,7 @@ public class DynamoDbUserStoreTests
     for (var index = 0; index < userCount; index++)
     {
       var user = new DynamoDbUser();
-      await context.SaveAsync(user);
+      await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
       var login = new DynamoDbUserClaim
       {
         ClaimType = claimType,
@@ -2155,13 +2253,15 @@ public class DynamoDbUserStoreTests
   public async Task Should_ReplaceClaim_When_RequestIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
     var user = new DynamoDbUser();
-    await context.SaveAsync(user);
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
     var currentClaim = new Claim("current", "current");
     var newClaim = new Claim("claim", "claim");
@@ -2234,7 +2334,9 @@ public class DynamoDbUserStoreTests
   public async Task Should_UpdateUser_When_UserIsValid()
   {
     // Arrange
-    var context = new DynamoDBContext(DatabaseFixture.Client);
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
     var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
@@ -2246,7 +2348,7 @@ public class DynamoDbUserStoreTests
     await userStore.UpdateAsync(user, CancellationToken.None);
 
     // Assert
-    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey);
+    var databaseUser = await context.LoadAsync<DynamoDbUser>(user.PartitionKey, user.SortKey, new LoadConfig { OverrideTableName = DatabaseFixture.TableName });
     Assert.NotNull(databaseUser);
     Assert.Equal(databaseUser.UserName, user.UserName);
   }

@@ -32,7 +32,9 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     _client = database ?? options.Database!;
     _optionsMonitor = optionsMonitor;
-    _context = new DynamoDBContext(_client);
+    _context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => _client)
+      .Build();
   }
 
   public Task AddClaimAsync(TRoleEntity role, Claim claim, CancellationToken cancellationToken = default)
@@ -56,7 +58,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    await _context.SaveAsync(role, GetOperationConfig(), cancellationToken);
+    await _context.SaveAsync(role, GetSaveConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -65,7 +67,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    await _context.DeleteAsync(role, GetOperationConfig(), cancellationToken);
+    await _context.DeleteAsync(role, GetDeleteConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -78,13 +80,14 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     {
       Id = roleId,
     };
-    return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, GetOperationConfig(), cancellationToken);
+    return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, GetLoadConfig(), cancellationToken);
   }
 
   public async Task<TRoleEntity?> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedRoleName);
 
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
     var search = _context.FromQueryAsync<TRoleEntity>(new QueryOperationConfig
     {
       IndexName = "NormalizedName-index",
@@ -97,8 +100,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
         },
       },
       Limit = 1,
-    },
-    GetOperationConfig());
+    });
     var roles = await search.GetRemainingAsync(cancellationToken);
     return roles?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
   }
@@ -177,7 +179,7 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     // Ensure no one else is updating
     var databaseApplication = await _context.LoadAsync<TRoleEntity>(
-      role.PartitionKey, role.SortKey, GetOperationConfig(), cancellationToken);
+      role.PartitionKey, role.SortKey, GetLoadConfig(), cancellationToken);
     if (databaseApplication == default || databaseApplication.ConcurrencyStamp != role.ConcurrencyStamp)
     {
       return IdentityResult.Failed(new IdentityError
@@ -189,12 +191,27 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     role.ConcurrencyStamp = Guid.NewGuid().ToString();
 
-    await _context.SaveAsync(role, GetOperationConfig(), cancellationToken);
+    await _context.SaveAsync(role, GetSaveConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
 
   private DynamoDBOperationConfig GetOperationConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private SaveConfig GetSaveConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private LoadConfig GetLoadConfig() => new()
+  {
+    OverrideTableName = _tableName,
+  };
+
+  private DeleteConfig GetDeleteConfig() => new()
   {
     OverrideTableName = _tableName,
   };
