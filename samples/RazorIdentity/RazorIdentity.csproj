@@ -8,9 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.9.0" />
-    <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="2.0.0" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.9.2" />
-    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.9" />
+    <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="2.0.1" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.9.5" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.11" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="9.0.10" />
