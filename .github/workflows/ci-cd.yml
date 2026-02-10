@@ -36,7 +36,7 @@ jobs:
 
       - name: Configure AWS Credentials
         if: env.is_pull_request == 'false'
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-region: eu-north-1
           role-to-assume: ${{ secrets.DEPLOY_ROLE }}
