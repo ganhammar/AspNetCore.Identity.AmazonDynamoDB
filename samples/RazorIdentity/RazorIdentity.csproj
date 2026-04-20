@@ -9,11 +9,11 @@
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.10.0" />
     <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="2.0.1" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.17.3" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.17.9" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.33" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.14" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.6" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
   </ItemGroup>
 
