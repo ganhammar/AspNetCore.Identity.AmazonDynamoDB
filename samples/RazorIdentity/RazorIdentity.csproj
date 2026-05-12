@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="1.10.0" />
+    <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" Version="2.0.0" />
     <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="2.0.1" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.18.1" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.36" />
