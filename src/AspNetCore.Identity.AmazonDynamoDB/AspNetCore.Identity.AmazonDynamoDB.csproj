@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.21.4" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.21.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.7.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="10.0.9" />
