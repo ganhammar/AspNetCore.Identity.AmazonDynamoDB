@@ -19,10 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.103" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.8.0" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="10.0.10" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.104" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.10.0" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="10.0.12" />
   </ItemGroup>
 
 </Project>
