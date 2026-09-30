@@ -8,6 +8,7 @@ using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
+[Collection(Constants.DatabaseCollection)]
 public class DynamoDbBuilderTests
 {
   [Fact]
