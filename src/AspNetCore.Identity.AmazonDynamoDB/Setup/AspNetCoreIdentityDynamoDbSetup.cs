@@ -1,5 +1,7 @@
 ﻿using Amazon.DynamoDBv2;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace AspNetCore.Identity.AmazonDynamoDB;
@@ -8,11 +10,8 @@ public static class AspNetCoreIdentityDynamoDbSetup
 {
   public static void EnsureInitialized(IServiceProvider services)
   {
-    var database = services.GetService<IAmazonDynamoDB>();
-
-    EnsureInitialized(
-      services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>(),
-      database);
+    EnsureInitializedAsync(services)
+      .GetAwaiter().GetResult();
   }
 
   public static async Task EnsureInitializedAsync(
@@ -20,10 +19,13 @@ public static class AspNetCoreIdentityDynamoDbSetup
     CancellationToken cancellationToken = default)
   {
     var database = services.GetService<IAmazonDynamoDB>();
+    var logger = services.GetService<ILoggerFactory>()?.CreateLogger(typeof(AspNetCoreIdentityDynamoDbSetup))
+      ?? NullLogger.Instance;
 
-    await EnsureInitializedAsync(
-      services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>(),
+    await DynamoDbTableSetup.EnsureInitializedAsync(
+      services.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue,
       database,
+      logger,
       cancellationToken);
   }
 

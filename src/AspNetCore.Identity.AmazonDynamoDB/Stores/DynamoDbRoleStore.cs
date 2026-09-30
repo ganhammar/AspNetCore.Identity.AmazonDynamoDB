@@ -2,6 +2,7 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
@@ -178,21 +179,24 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    // Ensure no one else is updating
-    var databaseApplication = await _context.LoadAsync<TRoleEntity>(
-      role.PartitionKey, role.SortKey, GetLoadConfig(), cancellationToken);
-    if (databaseApplication == default || databaseApplication.ConcurrencyStamp != role.ConcurrencyStamp)
+    var concurrencyStamp = role.ConcurrencyStamp;
+    role.ConcurrencyStamp = Guid.NewGuid().ToString();
+
+    try
     {
+      // Ensure no one else has updated the role since it was loaded
+      await _context.SaveAsync(role, GetSaveConfig(concurrencyStamp), cancellationToken);
+    }
+    catch (ConditionalCheckFailedException)
+    {
+      role.ConcurrencyStamp = concurrencyStamp;
+
       return IdentityResult.Failed(new IdentityError
       {
         Code = "ConcurrencyFailure",
         Description = "ConcurrencyStamp mismatch",
       });
     }
-
-    role.ConcurrencyStamp = Guid.NewGuid().ToString();
-
-    await _context.SaveAsync(role, GetSaveConfig(), cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -206,6 +210,29 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     OverrideTableName = _tableName,
   };
+
+  private SaveConfig GetSaveConfig(string? concurrencyStamp)
+  {
+    // Only save when the role exists and still has the concurrency stamp it was loaded with
+    var condition = new ContextExpression();
+
+    if (concurrencyStamp == default)
+    {
+      condition.SetFilter<TRoleEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
+        && ContextExpression.AttributeNotExists(x.ConcurrencyStamp));
+    }
+    else
+    {
+      condition.SetFilter<TRoleEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
+        && x.ConcurrencyStamp == concurrencyStamp);
+    }
+
+    return new()
+    {
+      OverrideTableName = _tableName,
+      ConditionalExpression = condition,
+    };
+  }
 
   private LoadConfig GetLoadConfig() => new()
   {

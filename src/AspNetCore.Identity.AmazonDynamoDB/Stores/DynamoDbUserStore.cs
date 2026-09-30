@@ -22,7 +22,9 @@ public class DynamoDbUserStore<TUserEntity> :
     IUserAuthenticatorKeyStore<TUserEntity>,
     IUserAuthenticationTokenStore<TUserEntity>,
     IUserTwoFactorRecoveryCodeStore<TUserEntity>,
+#if NET10_0_OR_GREATER
     IUserPasskeyStore<TUserEntity>,
+#endif
     IProtectedUserStore<TUserEntity>
   where TUserEntity : DynamoDbUser, new()
 {
@@ -142,22 +144,34 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    var query = await _client.QueryAsync(new()
-    {
-      ProjectionExpression = "PartitionKey, SortKey",
-      TableName = _tableName,
-      KeyConditionExpression = "PartitionKey = :partitionKey",
-      ExpressionAttributeValues = new()
-      {
-        { ":partitionKey", new(user.PartitionKey) },
-      },
-    }, cancellationToken);
+    var keys = new List<Dictionary<string, AttributeValue>>();
+    Dictionary<string, AttributeValue>? exclusiveStartKey = default;
 
-    var requests = query.Items.Select(x => new WriteRequest(new DeleteRequest(x))).ToList();
-    await _client.BatchWriteItemAsync(new BatchWriteItemRequest(new()
+    do
     {
-      { _tableName, requests }
-    }), cancellationToken);
+      var query = await _client.QueryAsync(new()
+      {
+        ProjectionExpression = "PartitionKey, SortKey",
+        TableName = _tableName,
+        KeyConditionExpression = "PartitionKey = :partitionKey",
+        ExpressionAttributeValues = new()
+        {
+          { ":partitionKey", new(user.PartitionKey) },
+        },
+        ExclusiveStartKey = exclusiveStartKey,
+        ConsistentRead = true,
+      }, cancellationToken);
+
+      keys.AddRange(query.Items ?? new());
+      exclusiveStartKey = query.LastEvaluatedKey;
+    } while (exclusiveStartKey?.Count > 0);
+
+    // Delete the user item last, so that a delete that fails halfway can be retried
+    var requests = keys
+      .OrderBy(x => x["SortKey"].S == user.SortKey)
+      .Select(x => new WriteRequest(new DeleteRequest(x)));
+
+    await DynamoDbUtils.BatchWriteAsync(_client, _tableName, requests, cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -430,7 +444,37 @@ public class DynamoDbUserStore<TUserEntity> :
       user.Roles = roles.Select(x => x.RoleName!).ToList();
     }
 
-    return user.Roles;
+    if (_optionsMonitor.CurrentValue.ResolveRoleNames == false)
+    {
+      return user.Roles;
+    }
+
+    // The user keeps the normalized names, since that is what the other role methods are given
+    var roleNames = await Task.WhenAll(user.Roles.Select(x => GetRoleName(x, cancellationToken)));
+    return roleNames.ToList();
+  }
+
+  private async Task<string> GetRoleName(string normalizedRoleName, CancellationToken cancellationToken)
+  {
+    var response = await _client.QueryAsync(new QueryRequest
+    {
+      TableName = _tableName,
+      IndexName = "NormalizedName-index",
+      KeyConditionExpression = "NormalizedName = :normalizedName",
+      ProjectionExpression = "#name",
+      ExpressionAttributeNames = new()
+      {
+        { "#name", "Name" },
+      },
+      ExpressionAttributeValues = new()
+      {
+        { ":normalizedName", new(normalizedRoleName) },
+      },
+      Limit = 1,
+    }, cancellationToken);
+
+    var roleName = response.Items?.FirstOrDefault()?.GetValueOrDefault("Name")?.S;
+    return string.IsNullOrEmpty(roleName) ? normalizedRoleName : roleName;
   }
 
   public Task<string?> GetSecurityStampAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -725,21 +769,24 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    // Ensure no one else is updating
-    var databaseUser = await _context.LoadAsync<TUserEntity>(
-      user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
-    if (databaseUser == default || databaseUser.ConcurrencyStamp != user.ConcurrencyStamp)
+    var concurrencyStamp = user.ConcurrencyStamp;
+    user.ConcurrencyStamp = Guid.NewGuid().ToString();
+
+    try
     {
+      // Ensure no one else has updated the user since it was loaded
+      await _context.SaveAsync(user, GetSaveConfig(concurrencyStamp), cancellationToken);
+    }
+    catch (ConditionalCheckFailedException)
+    {
+      user.ConcurrencyStamp = concurrencyStamp;
+
       return IdentityResult.Failed(new IdentityError
       {
         Code = "ConcurrencyFailure",
         Description = "ConcurrencyStamp mismatch",
       });
     }
-
-    user.ConcurrencyStamp = Guid.NewGuid().ToString();
-
-    await _context.SaveAsync(user, GetSaveConfig(), cancellationToken);
     await SaveClaims(user, cancellationToken);
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
@@ -1098,6 +1145,7 @@ public class DynamoDbUserStore<TUserEntity> :
     return user.Tokens!.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
   }
 
+#if NET10_0_OR_GREATER
   public async Task AddOrUpdatePasskeyAsync(TUserEntity user, UserPasskeyInfo passkey, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
@@ -1189,25 +1237,6 @@ public class DynamoDbUserStore<TUserEntity> :
     user.Passkeys.RemoveAll(x => x.CredentialId == encodedCredentialId);
   }
 
-  private async Task<List<DynamoDbUserPasskey>> GetRawPasskeys(TUserEntity user, CancellationToken cancellationToken)
-  {
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserPasskey>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", user.PartitionKey },
-          { ":sortKey", PasskeySortKeyPrefix },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    return await search.GetRemainingAsync(cancellationToken);
-  }
-
   private static DynamoDbUserPasskey ToDynamoDbUserPasskey(TUserEntity user, UserPasskeyInfo passkey) => new()
   {
     UserId = user.Id,
@@ -1238,6 +1267,26 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     Name = passkey.Name,
   };
+#endif
+
+  private async Task<List<DynamoDbUserPasskey>> GetRawPasskeys(TUserEntity user, CancellationToken cancellationToken)
+  {
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
+    var search = _context.FromQueryAsync<DynamoDbUserPasskey>(new QueryOperationConfig
+    {
+      KeyExpression = new Expression
+      {
+        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
+        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+        {
+          { ":partitionKey", user.PartitionKey },
+          { ":sortKey", PasskeySortKeyPrefix },
+        },
+      },
+    }, GetOperationConfig());
+#pragma warning restore CS0618
+    return await search.GetRemainingAsync(cancellationToken);
+  }
 
   public async Task RemoveDeletedPasskeys(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -1268,23 +1317,50 @@ public class DynamoDbUserStore<TUserEntity> :
 
   public async Task SavePasskeys(TUserEntity user, CancellationToken cancellationToken)
   {
-    await RemoveDeletedPasskeys(user, cancellationToken);
-
     if (user.Passkeys == default)
     {
       return;
     }
 
+    var persistedPasskeys = (await GetRawPasskeys(user, cancellationToken))
+      .ToDictionary(x => x.SortKey);
+    var currentSortKeys = user.Passkeys.Select(x => x.SortKey).ToHashSet();
     var batch = _context.CreateBatchWrite<DynamoDbUserPasskey>(GetBatchWriteConfig());
 
+    foreach (var passkey in persistedPasskeys.Values.Where(x => currentSortKeys.Contains(x.SortKey) == false))
+    {
+      batch.AddDeleteItem(passkey);
+    }
+
+    // Passkeys carry the attestation object and client data, so only write the ones that changed
     foreach (var passkey in user.Passkeys)
     {
       passkey.UserId = user.Id;
-      batch.AddPutItem(passkey);
+
+      if (persistedPasskeys.TryGetValue(passkey.SortKey, out var persistedPasskey) == false
+        || IsEqual(persistedPasskey, passkey) == false)
+      {
+        batch.AddPutItem(passkey);
+      }
     }
 
     await batch.ExecuteAsync(cancellationToken);
   }
+
+  private static bool IsEqual(DynamoDbUserPasskey left, DynamoDbUserPasskey right) =>
+    left.UserId == right.UserId
+    && left.CredentialId == right.CredentialId
+    && left.PublicKey == right.PublicKey
+    && left.Name == right.Name
+    && left.CreatedAt == right.CreatedAt
+    && left.SignCount == right.SignCount
+    && (left.Transports == right.Transports
+      || (left.Transports != default && right.Transports != default && left.Transports.SequenceEqual(right.Transports)))
+    && left.IsUserVerified == right.IsUserVerified
+    && left.IsBackupEligible == right.IsBackupEligible
+    && left.IsBackedUp == right.IsBackedUp
+    && left.AttestationObject == right.AttestationObject
+    && left.ClientDataJson == right.ClientDataJson;
 
   private DynamoDBOperationConfig GetOperationConfig() => new()
   {
@@ -1295,6 +1371,29 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     OverrideTableName = _tableName,
   };
+
+  private SaveConfig GetSaveConfig(string? concurrencyStamp)
+  {
+    // Only save when the user exists and still has the concurrency stamp it was loaded with
+    var condition = new ContextExpression();
+
+    if (concurrencyStamp == default)
+    {
+      condition.SetFilter<TUserEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
+        && ContextExpression.AttributeNotExists(x.ConcurrencyStamp));
+    }
+    else
+    {
+      condition.SetFilter<TUserEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
+        && x.ConcurrencyStamp == concurrencyStamp);
+    }
+
+    return new()
+    {
+      OverrideTableName = _tableName,
+      ConditionalExpression = condition,
+    };
+  }
 
   private LoadConfig GetLoadConfig() => new()
   {

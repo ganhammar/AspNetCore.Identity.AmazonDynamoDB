@@ -1,5 +1,8 @@
-﻿using System.Security.Cryptography;
+﻿#if NET10_0_OR_GREATER
+using System.Buffers.Text;
+using System.Security.Cryptography;
 using System.Text;
+using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -396,6 +399,95 @@ public class DynamoDbUserStorePasskeyTests
     Assert.Null(await userManager.FindByPasskeyIdAsync(passkey.CredentialId));
   }
 
+  [Fact]
+  public async Task Should_OnlyWriteChangedPasskey_When_Updating()
+  {
+    // Arrange
+    var (userStore, recorder) = await CreateRecordingUserStore();
+    var passkeys = new[] { CreatePasskey(), CreatePasskey(), CreatePasskey() };
+    var user = await CreateUserWithPasskeys(userStore, passkeys);
+    var passkey = (await userStore.FindPasskeyAsync(user, passkeys[1].CredentialId, CancellationToken.None))!;
+    passkey.SignCount = 5;
+    await userStore.AddOrUpdatePasskeyAsync(user, passkey, CancellationToken.None);
+    recorder.Requests.Clear();
+
+    // Act
+    var result = await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.True(result.Succeeded);
+    var write = Assert.Single(GetPasskeyWrites(recorder));
+    Assert.Equal(GetSortKey(passkeys[1]), write.PutRequest.Item["SortKey"].S);
+    Assert.Empty(recorder.Requests.OfType<GetItemRequest>());
+    var persisted = await userStore.FindPasskeyAsync(
+      new DynamoDbUser { Id = user.Id }, passkeys[1].CredentialId, CancellationToken.None);
+    Assert.Equal(5u, persisted!.SignCount);
+  }
+
+  [Fact]
+  public async Task Should_OnlyDeleteRemovedPasskey_When_Updating()
+  {
+    // Arrange
+    var (userStore, recorder) = await CreateRecordingUserStore();
+    var passkeys = new[] { CreatePasskey(), CreatePasskey(), CreatePasskey() };
+    var user = await CreateUserWithPasskeys(userStore, passkeys);
+    await userStore.RemovePasskeyAsync(user, passkeys[0].CredentialId, CancellationToken.None);
+    recorder.Requests.Clear();
+
+    // Act
+    await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Assert
+    var write = Assert.Single(GetPasskeyWrites(recorder));
+    Assert.Equal(GetSortKey(passkeys[0]), write.DeleteRequest.Key["SortKey"].S);
+    Assert.Equal(2, (await userStore.GetPasskeysAsync(new DynamoDbUser { Id = user.Id }, CancellationToken.None)).Count);
+  }
+
+  [Fact]
+  public async Task Should_NotWritePasskeys_When_NothingChanged()
+  {
+    // Arrange
+    var (userStore, recorder) = await CreateRecordingUserStore();
+    var user = await CreateUserWithPasskeys(userStore, [CreatePasskey(), CreatePasskey(transports: null)]);
+    await userStore.GetPasskeysAsync(user, CancellationToken.None);
+    recorder.Requests.Clear();
+
+    // Act
+    await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.Empty(GetPasskeyWrites(recorder));
+  }
+
+  private static async Task<(DynamoDbUserStore<DynamoDbUser>, RecordingDynamoDbClient)> CreateRecordingUserStore()
+  {
+    var (client, recorder) = RecordingDynamoDbClient.Create(DatabaseFixture.Client);
+    var options = TestUtils.GetOptions(new() { Database = client });
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    return (new DynamoDbUserStore<DynamoDbUser>(options), recorder);
+  }
+
+  private static async Task<DynamoDbUser> CreateUserWithPasskeys(
+    DynamoDbUserStore<DynamoDbUser> userStore, IEnumerable<UserPasskeyInfo> passkeys)
+  {
+    var user = new DynamoDbUser();
+    foreach (var passkey in passkeys)
+    {
+      await userStore.AddOrUpdatePasskeyAsync(user, passkey, CancellationToken.None);
+    }
+    await userStore.CreateAsync(user, CancellationToken.None);
+    return (await userStore.FindByIdAsync(user.Id, CancellationToken.None))!;
+  }
+
+  private static List<WriteRequest> GetPasskeyWrites(RecordingDynamoDbClient recorder) => recorder.Requests
+    .OfType<BatchWriteItemRequest>()
+    .SelectMany(x => x.RequestItems.Values.SelectMany(y => y))
+    .Where(x => (x.PutRequest?.Item ?? x.DeleteRequest?.Key)?["SortKey"].S.StartsWith("PASSKEY#") == true)
+    .ToList();
+
+  private static string GetSortKey(UserPasskeyInfo passkey)
+    => $"PASSKEY#{Base64Url.EncodeToString(passkey.CredentialId)}";
+
   private static async Task<DynamoDbUserStore<DynamoDbUser>> CreateUserStore()
   {
     var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
@@ -405,6 +497,9 @@ public class DynamoDbUserStorePasskeyTests
 
   private static UserPasskeyInfo CreatePasskey(byte[]? credentialId = default, uint signCount = 0)
     => CreatePasskey(credentialId, signCount, ["internal", "hybrid"]);
+
+  private static UserPasskeyInfo CreatePasskey(string[]? transports)
+    => CreatePasskey(default, 0, transports);
 
   private static UserPasskeyInfo CreatePasskey(
     byte[]? credentialId,
@@ -439,3 +534,4 @@ public class DynamoDbUserStorePasskeyTests
     Assert.Equal(expected.ClientDataJson, actual.ClientDataJson);
   }
 }
+#endif

@@ -88,6 +88,38 @@ public class DynamoDbBuilderTests
     Assert.Equal(DatabaseFixture.Client, options.Database);
   }
 
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public void Should_SetResolveRoleNames_When_CallingResolveRoleNames(bool enabled)
+  {
+    // Arrange
+    var services = new ServiceCollection();
+
+    // Act
+    CreateBuilder(services).ResolveRoleNames(enabled);
+
+    // Assert
+    var serviceProvider = services.BuildServiceProvider();
+    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
+    Assert.Equal(enabled, options.ResolveRoleNames);
+  }
+
+  [Fact]
+  public void Should_NotResolveRoleNames_When_NotConfigured()
+  {
+    // Arrange
+    var services = new ServiceCollection();
+
+    // Act
+    CreateBuilder(services);
+
+    // Assert
+    var serviceProvider = services.BuildServiceProvider();
+    var options = serviceProvider.GetRequiredService<IOptionsMonitor<DynamoDbOptions>>().CurrentValue;
+    Assert.False(options.ResolveRoleNames);
+  }
+
   [Fact]
   public void Should_ThrowException_When_SettingBillingModeAndBillingModeIsNull()
   {
