@@ -5,6 +5,7 @@ using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
 
+[Collection(Constants.DatabaseCollection)]
 public class DynamoDbOptionsMonitorTests
 {
   private class TestOptionsMonitor<T> : IOptionsMonitor<T>
