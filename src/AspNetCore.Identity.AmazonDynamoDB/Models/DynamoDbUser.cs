@@ -28,4 +28,6 @@ public class DynamoDbUser : IdentityUser
   public List<string>? Roles { get; set; }
   [DynamoDBIgnore]
   public List<IdentityUserToken<string>>? Tokens { get; set; }
+  [DynamoDBIgnore]
+  public List<DynamoDbUserPasskey>? Passkeys { get; set; }
 }
