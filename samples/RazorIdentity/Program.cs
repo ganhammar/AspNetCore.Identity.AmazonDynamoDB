@@ -65,8 +65,7 @@ app.MapGet("/weatherforecast", () =>
       .ToArray();
   return forecast;
 })
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+.WithName("GetWeatherForecast");
 
 // Should not be run during startup in production, move to setup script
 AspNetCoreIdentityDynamoDbSetup.EnsureInitialized(app.Services);
