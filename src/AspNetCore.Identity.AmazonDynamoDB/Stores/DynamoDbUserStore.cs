@@ -1398,6 +1398,8 @@ public class DynamoDbUserStore<TUserEntity> :
   private LoadConfig GetLoadConfig() => new()
   {
     OverrideTableName = _tableName,
+    // Updates check the concurrency stamp, so a stale user would fail to update
+    ConsistentRead = true,
   };
 
   private BatchGetConfig GetBatchGetConfig() => new()

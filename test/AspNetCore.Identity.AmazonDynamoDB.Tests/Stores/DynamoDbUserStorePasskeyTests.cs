@@ -459,10 +459,27 @@ public class DynamoDbUserStorePasskeyTests
     Assert.Empty(GetPasskeyWrites(recorder));
   }
 
+  [Fact]
+  public async Task Should_UseConsistentRead_When_FindingUserByPasskeyId()
+  {
+    // Arrange
+    var (userStore, recorder) = await CreateRecordingUserStore();
+    var passkey = CreatePasskey();
+    var user = await CreateUserWithPasskeys(userStore, [passkey]);
+    recorder.Requests.Clear();
+
+    // Act
+    var found = await userStore.FindByPasskeyIdAsync(passkey.CredentialId, CancellationToken.None);
+
+    // Assert
+    Assert.Equal(user.Id, found!.Id);
+    Assert.True(Assert.Single(recorder.Requests.OfType<GetItemRequest>()).ConsistentRead);
+  }
+
   private static async Task<(DynamoDbUserStore<DynamoDbUser>, RecordingDynamoDbClient)> CreateRecordingUserStore()
   {
-    var (client, recorder) = RecordingDynamoDbClient.Create(DatabaseFixture.Client);
-    var options = TestUtils.GetOptions(new() { Database = client });
+    var recorder = new RecordingDynamoDbClient();
+    var options = TestUtils.GetOptions(new() { Database = recorder });
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
     return (new DynamoDbUserStore<DynamoDbUser>(options), recorder);
   }

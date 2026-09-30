@@ -517,6 +517,38 @@ public class DynamoDbUserStoreTests
   }
 
   [Fact]
+  public async Task Should_UseConsistentRead_When_FindingUserByIdOrLogin()
+  {
+    // Arrange, the concurrency stamp of a stale user would make the next update fail
+    var recorder = new RecordingDynamoDbClient();
+    var options = TestUtils.GetOptions(new() { Database = recorder });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var login = new DynamoDbUserLogin
+    {
+      LoginProvider = "test",
+      ProviderKey = Guid.NewGuid().ToString(),
+    };
+    var user = new DynamoDbUser
+    {
+      Logins = [login],
+    };
+    await userStore.CreateAsync(user, CancellationToken.None);
+    recorder.Requests.Clear();
+
+    // Act
+    var foundById = await userStore.FindByIdAsync(user.Id, CancellationToken.None);
+    var foundByLogin = await userStore.FindByLoginAsync(login.LoginProvider, login.ProviderKey, CancellationToken.None);
+
+    // Assert
+    Assert.NotNull(foundById);
+    Assert.NotNull(foundByLogin);
+    var loads = recorder.Requests.OfType<GetItemRequest>().ToList();
+    Assert.Equal(2, loads.Count);
+    Assert.All(loads, x => Assert.True(x.ConsistentRead));
+  }
+
+  [Fact]
   public async Task Should_ThrowException_When_TryingToFindByEmailThatIsNull()
   {
     // Arrange

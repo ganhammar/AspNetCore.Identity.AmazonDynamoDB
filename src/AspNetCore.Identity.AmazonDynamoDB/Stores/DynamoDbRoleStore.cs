@@ -237,6 +237,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   private LoadConfig GetLoadConfig() => new()
   {
     OverrideTableName = _tableName,
+    // Updates check the concurrency stamp, so a stale role would fail to update
+    ConsistentRead = true,
   };
 
   private DeleteConfig GetDeleteConfig() => new()

@@ -738,6 +738,26 @@ public class DynamoDbRoleStoreTests
   }
 
   [Fact]
+  public async Task Should_UseConsistentRead_When_FindingRoleById()
+  {
+    // Arrange, the concurrency stamp of a stale role would make the next update fail
+    var recorder = new RecordingDynamoDbClient();
+    var options = TestUtils.GetOptions(new() { Database = recorder });
+    var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var role = new DynamoDbRole();
+    await roleStore.CreateAsync(role, CancellationToken.None);
+    recorder.Requests.Clear();
+
+    // Act
+    var found = await roleStore.FindByIdAsync(role.Id, CancellationToken.None);
+
+    // Assert
+    Assert.NotNull(found);
+    Assert.True(Assert.Single(recorder.Requests.OfType<Amazon.DynamoDBv2.Model.GetItemRequest>()).ConsistentRead);
+  }
+
+  [Fact]
   public async Task Should_UpdateRole_When_RoleIsValid()
   {
     // Arrange
