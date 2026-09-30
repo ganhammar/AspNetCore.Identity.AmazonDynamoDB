@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -11,9 +11,8 @@
     <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="2.0.1" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.103" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.100.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="9.0.18" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.18" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
