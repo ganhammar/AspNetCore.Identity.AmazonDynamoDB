@@ -2,7 +2,7 @@
 
 ![Build Status](https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB/actions/workflows/ci-cd.yml/badge.svg) [![codecov](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB/branch/main/graph/badge.svg?token=S4M1VCX8J6)](https://codecov.io/gh/ganhammar/AspNetCore.Identity.AmazonDynamoDB) [![NuGet](https://img.shields.io/nuget/v/AspNetCore.Identity.AmazonDynamoDB)](https://www.nuget.org/packages/AspNetCore.Identity.AmazonDynamoDB)
 
-An [ASP.NET Core Identity 9.0](https://github.com/dotnet/aspnetcore/tree/main/src/Identity) provider for [DynamoDB](https://aws.amazon.com/dynamodb/).
+An [ASP.NET Core Identity 10.0](https://github.com/dotnet/aspnetcore/tree/main/src/Identity) provider for [DynamoDB](https://aws.amazon.com/dynamodb/), including passkey (WebAuthn) credentials through `IUserPasskeyStore<TUser>`.
 
 ## Getting Started
 
@@ -42,6 +42,8 @@ Or asynchronously:
 ```c#
 await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(serviceProvider);
 ```
+
+If the table already exists, any global secondary index that is missing from it (such as `CredentialId-index`, used to look up users by passkey) is added and the call waits until the index is active. This requires the `dynamodb:DescribeTable` and `dynamodb:UpdateTable` permissions on the table.
 
 ## Tests
 

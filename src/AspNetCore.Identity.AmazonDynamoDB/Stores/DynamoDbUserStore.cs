@@ -22,6 +22,7 @@ public class DynamoDbUserStore<TUserEntity> :
     IUserAuthenticatorKeyStore<TUserEntity>,
     IUserAuthenticationTokenStore<TUserEntity>,
     IUserTwoFactorRecoveryCodeStore<TUserEntity>,
+    IUserPasskeyStore<TUserEntity>,
     IProtectedUserStore<TUserEntity>
   where TUserEntity : DynamoDbUser, new()
 {
@@ -33,6 +34,7 @@ public class DynamoDbUserStore<TUserEntity> :
   private const string InternalLoginProvider = "[AspNetUserStore]";
   private const string AuthenticatorKeyTokenName = "AuthenticatorKey";
   private const string RecoveryCodeTokenName = "RecoveryCodes";
+  private const string PasskeySortKeyPrefix = "PASSKEY#";
 
   public DynamoDbUserStore(
     IOptionsMonitor<DynamoDbOptions> optionsMonitor,
@@ -131,6 +133,7 @@ public class DynamoDbUserStore<TUserEntity> :
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
     await SaveTokens(user, cancellationToken);
+    await SavePasskeys(user, cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -741,6 +744,7 @@ public class DynamoDbUserStore<TUserEntity> :
     await SaveLogins(user, cancellationToken);
     await SaveRoles(user, cancellationToken);
     await SaveTokens(user, cancellationToken);
+    await SavePasskeys(user, cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -1092,6 +1096,194 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     return user.Tokens!.FirstOrDefault(x => x.LoginProvider == loginProvider && x.Name == name);
+  }
+
+  public async Task AddOrUpdatePasskeyAsync(TUserEntity user, UserPasskeyInfo passkey, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(user);
+    ArgumentNullException.ThrowIfNull(passkey);
+
+    user.Passkeys ??= await GetRawPasskeys(user, cancellationToken);
+
+    var credentialId = Base64UrlEncoding.Encode(passkey.CredentialId);
+    var existing = user.Passkeys.FirstOrDefault(x => x.CredentialId == credentialId);
+
+    if (existing == default)
+    {
+      user.Passkeys.Add(ToDynamoDbUserPasskey(user, passkey));
+      return;
+    }
+
+    existing.Name = passkey.Name;
+    existing.SignCount = passkey.SignCount;
+    existing.IsBackedUp = passkey.IsBackedUp;
+    existing.IsUserVerified = passkey.IsUserVerified;
+  }
+
+  public async Task<IList<UserPasskeyInfo>> GetPasskeysAsync(TUserEntity user, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(user);
+
+    user.Passkeys ??= await GetRawPasskeys(user, cancellationToken);
+
+    return user.Passkeys
+      .Select(ToUserPasskeyInfo)
+      .ToList();
+  }
+
+  public async Task<TUserEntity?> FindByPasskeyIdAsync(byte[] credentialId, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(credentialId);
+
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
+    var search = _context.FromQueryAsync<DynamoDbUserPasskey>(new QueryOperationConfig
+    {
+      IndexName = "CredentialId-index",
+      KeyExpression = new Expression
+      {
+        ExpressionStatement = "CredentialId = :credentialId",
+        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+        {
+          { ":credentialId", Base64UrlEncoding.Encode(credentialId) },
+        },
+      },
+      Limit = 1
+    }, GetOperationConfig());
+#pragma warning restore CS0618
+    var passkeys = await search.GetNextSetAsync(cancellationToken);
+
+    if (passkeys.Any() == false || passkeys.First().UserId == default)
+    {
+      return default;
+    }
+
+    var user = new DynamoDbUser
+    {
+      Id = passkeys.First().UserId!,
+    };
+    return await _context.LoadAsync<TUserEntity>(
+      user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
+  }
+
+  public async Task<UserPasskeyInfo?> FindPasskeyAsync(TUserEntity user, byte[] credentialId, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(user);
+    ArgumentNullException.ThrowIfNull(credentialId);
+
+    user.Passkeys ??= await GetRawPasskeys(user, cancellationToken);
+
+    var encodedCredentialId = Base64UrlEncoding.Encode(credentialId);
+    var passkey = user.Passkeys.FirstOrDefault(x => x.CredentialId == encodedCredentialId);
+
+    return passkey == default ? default : ToUserPasskeyInfo(passkey);
+  }
+
+  public async Task RemovePasskeyAsync(TUserEntity user, byte[] credentialId, CancellationToken cancellationToken)
+  {
+    ArgumentNullException.ThrowIfNull(user);
+    ArgumentNullException.ThrowIfNull(credentialId);
+
+    user.Passkeys ??= await GetRawPasskeys(user, cancellationToken);
+
+    var encodedCredentialId = Base64UrlEncoding.Encode(credentialId);
+    user.Passkeys.RemoveAll(x => x.CredentialId == encodedCredentialId);
+  }
+
+  private async Task<List<DynamoDbUserPasskey>> GetRawPasskeys(TUserEntity user, CancellationToken cancellationToken)
+  {
+#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
+    var search = _context.FromQueryAsync<DynamoDbUserPasskey>(new QueryOperationConfig
+    {
+      KeyExpression = new Expression
+      {
+        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
+        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
+        {
+          { ":partitionKey", user.PartitionKey },
+          { ":sortKey", PasskeySortKeyPrefix },
+        },
+      },
+    }, GetOperationConfig());
+#pragma warning restore CS0618
+    return await search.GetRemainingAsync(cancellationToken);
+  }
+
+  private static DynamoDbUserPasskey ToDynamoDbUserPasskey(TUserEntity user, UserPasskeyInfo passkey) => new()
+  {
+    UserId = user.Id,
+    CredentialId = Base64UrlEncoding.Encode(passkey.CredentialId),
+    PublicKey = Base64UrlEncoding.Encode(passkey.PublicKey),
+    Name = passkey.Name,
+    CreatedAt = passkey.CreatedAt,
+    SignCount = passkey.SignCount,
+    Transports = passkey.Transports?.ToList(),
+    IsUserVerified = passkey.IsUserVerified,
+    IsBackupEligible = passkey.IsBackupEligible,
+    IsBackedUp = passkey.IsBackedUp,
+    AttestationObject = Base64UrlEncoding.Encode(passkey.AttestationObject),
+    ClientDataJson = Base64UrlEncoding.Encode(passkey.ClientDataJson),
+  };
+
+  private static UserPasskeyInfo ToUserPasskeyInfo(DynamoDbUserPasskey passkey) => new(
+    Base64UrlEncoding.Decode(passkey.CredentialId!),
+    Base64UrlEncoding.Decode(passkey.PublicKey!),
+    passkey.CreatedAt,
+    passkey.SignCount,
+    passkey.Transports?.ToArray(),
+    passkey.IsUserVerified,
+    passkey.IsBackupEligible,
+    passkey.IsBackedUp,
+    Base64UrlEncoding.Decode(passkey.AttestationObject!),
+    Base64UrlEncoding.Decode(passkey.ClientDataJson!))
+  {
+    Name = passkey.Name,
+  };
+
+  public async Task RemoveDeletedPasskeys(TUserEntity user, CancellationToken cancellationToken)
+  {
+    if (user.Passkeys == default)
+    {
+      return;
+    }
+
+    var persistedPasskeys = await GetRawPasskeys(user, cancellationToken);
+    var currentSortKeys = user.Passkeys.Select(x => x.SortKey).ToHashSet();
+
+    var toBeDeleted = persistedPasskeys
+      .Where(x => currentSortKeys.Contains(x.SortKey) == false)
+      .ToList();
+
+    if (toBeDeleted.Count > 0)
+    {
+      var batch = _context.CreateBatchWrite<DynamoDbUserPasskey>(GetBatchWriteConfig());
+
+      foreach (var passkey in toBeDeleted)
+      {
+        batch.AddDeleteItem(passkey);
+      }
+
+      await batch.ExecuteAsync(cancellationToken);
+    }
+  }
+
+  public async Task SavePasskeys(TUserEntity user, CancellationToken cancellationToken)
+  {
+    await RemoveDeletedPasskeys(user, cancellationToken);
+
+    if (user.Passkeys == default)
+    {
+      return;
+    }
+
+    var batch = _context.CreateBatchWrite<DynamoDbUserPasskey>(GetBatchWriteConfig());
+
+    foreach (var passkey in user.Passkeys)
+    {
+      passkey.UserId = user.Id;
+      batch.AddPutItem(passkey);
+    }
+
+    await batch.ExecuteAsync(cancellationToken);
   }
 
   private DynamoDBOperationConfig GetOperationConfig() => new()
