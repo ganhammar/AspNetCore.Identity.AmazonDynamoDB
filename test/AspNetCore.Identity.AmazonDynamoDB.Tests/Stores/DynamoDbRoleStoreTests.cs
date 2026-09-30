@@ -670,6 +670,74 @@ public class DynamoDbRoleStoreTests
   }
 
   [Fact]
+  public async Task Should_AllowOnlyOneUpdate_When_UpdatingRoleConcurrently()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var role = new DynamoDbRole();
+    await roleStore.CreateAsync(role, CancellationToken.None);
+    var copies = new List<DynamoDbRole>();
+    for (var index = 0; index < 5; index++)
+    {
+      copies.Add((await roleStore.FindByIdAsync(role.Id, CancellationToken.None))!);
+    }
+
+    // Act
+    var results = await Task.WhenAll(copies.Select(x => roleStore.UpdateAsync(x, CancellationToken.None)));
+
+    // Assert
+    Assert.Single(results, x => x.Succeeded);
+    Assert.All(results.Where(x => x.Succeeded == false), x =>
+      Assert.Contains(x.Errors, y => y.Code == "ConcurrencyFailure"));
+  }
+
+  [Fact]
+  public async Task Should_KeepConcurrencyStamp_When_RoleUpdateFails()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var role = new DynamoDbRole();
+    await roleStore.CreateAsync(role, CancellationToken.None);
+    var staleConcurrencyStamp = Guid.NewGuid().ToString();
+    role.ConcurrencyStamp = staleConcurrencyStamp;
+
+    // Act
+    var result = await roleStore.UpdateAsync(role, CancellationToken.None);
+
+    // Assert
+    Assert.False(result.Succeeded);
+    Assert.Equal(staleConcurrencyStamp, role.ConcurrencyStamp);
+  }
+
+  [Fact]
+  public async Task Should_UpdateRole_When_ConcurrencyStampIsNotSet()
+  {
+    // Arrange
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var roleStore = new DynamoDbRoleStore<DynamoDbRole>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var role = new DynamoDbRole
+    {
+      ConcurrencyStamp = default,
+    };
+    await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
+
+    // Act
+    var result = await roleStore.UpdateAsync(role, CancellationToken.None);
+
+    // Assert
+    Assert.True(result.Succeeded);
+    Assert.NotNull((await roleStore.FindByIdAsync(role.Id, CancellationToken.None))!.ConcurrencyStamp);
+  }
+
+  [Fact]
   public async Task Should_UpdateRole_When_RoleIsValid()
   {
     // Arrange

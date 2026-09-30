@@ -17,6 +17,14 @@ updates:
     schedule:
       interval: 'weekly'
 
+    ignore:
+      # Framework packages must stay on the major version of the target framework they are
+      # referenced for, moving to a new major is done together with adding that framework
+      - dependency-name: 'Microsoft.AspNetCore.*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'Microsoft.Extensions.*'
+        update-types: ['version-update:semver-major']
+
     groups:
       non-major-deps:
         patterns:

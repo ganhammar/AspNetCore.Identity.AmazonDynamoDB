@@ -49,4 +49,7 @@ public class DynamoDbBuilder
 
     return Configure(options => options.ProvisionedThroughput = provisionedThroughput);
   }
+
+  public DynamoDbBuilder ResolveRoleNames(bool enabled = true)
+    => Configure(options => options.ResolveRoleNames = enabled);
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace AspNetCore.Identity.AmazonDynamoDB.Tests;
@@ -397,6 +398,122 @@ public class DynamoDbUserStoreTests
       },
     });
     Assert.Empty(query.Items);
+  }
+
+  [Fact]
+  public async Task Should_DeleteUser_When_UserHasMoreItemsThanFitInOneBatch()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser
+    {
+      Claims = Enumerable.Range(0, 30).ToDictionary(x => $"claim-{x}", x => new List<string> { $"{x}" }),
+      Logins = Enumerable.Range(0, 5).Select(x => new DynamoDbUserLogin
+      {
+        LoginProvider = "test",
+        ProviderKey = $"{Guid.NewGuid()}",
+      }).ToList(),
+      Roles = Enumerable.Range(0, 5).Select(x => $"role-{x}").ToList(),
+      Tokens = Enumerable.Range(0, 5).Select(x => new IdentityUserToken<string>
+      {
+        LoginProvider = "test",
+        Name = $"token-{x}",
+        Value = $"{x}",
+      }).ToList(),
+    };
+    await userStore.CreateAsync(user, CancellationToken.None);
+    Assert.Equal(46, (await QueryUserItems(user)).Count);
+
+    // Act
+    var result = await userStore.DeleteAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.True(result.Succeeded);
+    Assert.Empty(await QueryUserItems(user));
+  }
+
+  [Fact]
+  public async Task Should_Succeed_When_DeletingUserThatDoesntExist()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+
+    // Act
+    var result = await userStore.DeleteAsync(new DynamoDbUser(), CancellationToken.None);
+
+    // Assert
+    Assert.True(result.Succeeded);
+  }
+
+  [Fact]
+  public async Task Should_DeleteEveryPageAndRetryUnprocessedItems_When_DeletingUser()
+  {
+    // Arrange
+    var user = new DynamoDbUser();
+    Dictionary<string, AttributeValue> Key(string sortKey) => new()
+    {
+      { "PartitionKey", new(user.PartitionKey) },
+      { "SortKey", new(sortKey) },
+    };
+    var database = new Mock<IAmazonDynamoDB>();
+    database
+      .Setup(x => x.QueryAsync(It.Is<QueryRequest>(y => y.ExclusiveStartKey == null), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new QueryResponse
+      {
+        Items = [Key(user.SortKey!), .. Enumerable.Range(0, 29).Select(x => Key($"CLAIM#{x}"))],
+        LastEvaluatedKey = Key("CLAIM#28"),
+      });
+    database
+      .Setup(x => x.QueryAsync(It.Is<QueryRequest>(y => y.ExclusiveStartKey != null), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new QueryResponse { Items = [Key("CLAIM#29")] });
+    var writtenSortKeys = new List<string>();
+    var unprocessedReturned = false;
+    database
+      .Setup(x => x.BatchWriteItemAsync(It.IsAny<BatchWriteItemRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync((BatchWriteItemRequest request, CancellationToken _) =>
+      {
+        var requests = request.RequestItems[DatabaseFixture.TableName];
+        Assert.True(requests.Count <= 25);
+
+        if (unprocessedReturned == false)
+        {
+          unprocessedReturned = true;
+          writtenSortKeys.AddRange(requests.Skip(1).Select(x => x.DeleteRequest.Key["SortKey"].S));
+          return new BatchWriteItemResponse { UnprocessedItems = new() { { DatabaseFixture.TableName, requests.Take(1).ToList() } } };
+        }
+
+        writtenSortKeys.AddRange(requests.Select(x => x.DeleteRequest.Key["SortKey"].S));
+        return new BatchWriteItemResponse();
+      });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(TestUtils.GetOptions(new()), database.Object);
+
+    // Act
+    var result = await userStore.DeleteAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.True(result.Succeeded);
+    Assert.Equal(31, writtenSortKeys.Distinct().Count());
+    Assert.Equal(user.SortKey, writtenSortKeys.Last());
+    database.Verify(x => x.BatchWriteItemAsync(It.IsAny<BatchWriteItemRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+  }
+
+  private static async Task<List<Dictionary<string, AttributeValue>>> QueryUserItems(DynamoDbUser user)
+  {
+    var query = await DatabaseFixture.Client.QueryAsync(new QueryRequest
+    {
+      TableName = DatabaseFixture.TableName,
+      KeyConditionExpression = "PartitionKey = :partitionKey",
+      ExpressionAttributeValues = new()
+      {
+        { ":partitionKey", new(user.PartitionKey) },
+      },
+      ConsistentRead = true,
+    });
+    return query.Items ?? new();
   }
 
   [Fact]
@@ -2331,6 +2448,74 @@ public class DynamoDbUserStoreTests
   }
 
   [Fact]
+  public async Task Should_AllowOnlyOneUpdate_When_UpdatingUserConcurrently()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser();
+    await userStore.CreateAsync(user, CancellationToken.None);
+    var copies = new List<DynamoDbUser>();
+    for (var index = 0; index < 5; index++)
+    {
+      copies.Add((await userStore.FindByIdAsync(user.Id, CancellationToken.None))!);
+    }
+
+    // Act
+    var results = await Task.WhenAll(copies.Select(x => userStore.UpdateAsync(x, CancellationToken.None)));
+
+    // Assert
+    Assert.Single(results, x => x.Succeeded);
+    Assert.All(results.Where(x => x.Succeeded == false), x =>
+      Assert.Contains(x.Errors, y => y.Code == "ConcurrencyFailure"));
+  }
+
+  [Fact]
+  public async Task Should_KeepConcurrencyStamp_When_UserUpdateFails()
+  {
+    // Arrange
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser();
+    await userStore.CreateAsync(user, CancellationToken.None);
+    var staleConcurrencyStamp = Guid.NewGuid().ToString();
+    user.ConcurrencyStamp = staleConcurrencyStamp;
+
+    // Act
+    var result = await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.False(result.Succeeded);
+    Assert.Equal(staleConcurrencyStamp, user.ConcurrencyStamp);
+  }
+
+  [Fact]
+  public async Task Should_UpdateUser_When_ConcurrencyStampIsNotSet()
+  {
+    // Arrange
+    var context = new DynamoDBContextBuilder()
+      .WithDynamoDBClient(() => DatabaseFixture.Client)
+      .Build();
+    var options = TestUtils.GetOptions(new() { Database = DatabaseFixture.Client });
+    var userStore = new DynamoDbUserStore<DynamoDbUser>(options);
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var user = new DynamoDbUser
+    {
+      ConcurrencyStamp = default,
+    };
+    await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
+
+    // Act
+    var result = await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.True(result.Succeeded);
+    Assert.NotNull((await userStore.FindByIdAsync(user.Id, CancellationToken.None))!.ConcurrencyStamp);
+  }
+
+  [Fact]
   public async Task Should_UpdateUser_When_UserIsValid()
   {
     // Arrange
@@ -2401,6 +2586,86 @@ public class DynamoDbUserStoreTests
     // Assert
     var claims = await userStore.GetClaimsAsync(user, CancellationToken.None);
     Assert.Single(claims);
+  }
+
+  [Fact]
+  public async Task Should_ReturnNormalizedRoleNames_When_RoleNamesAreNotResolved()
+  {
+    // Arrange
+    var (userStore, roleName) = await CreateUserStoreWithRole(resolveRoleNames: false);
+    var user = new DynamoDbUser
+    {
+      Roles = new() { roleName.ToUpperInvariant() },
+    };
+    await userStore.CreateAsync(user, CancellationToken.None);
+
+    // Act
+    var roles = await userStore.GetRolesAsync(new DynamoDbUser { Id = user.Id }, CancellationToken.None);
+
+    // Assert
+    Assert.Equal([roleName.ToUpperInvariant()], roles);
+  }
+
+  [Fact]
+  public async Task Should_ReturnRoleNames_When_RoleNamesAreResolved()
+  {
+    // Arrange
+    var (userStore, roleName) = await CreateUserStoreWithRole(resolveRoleNames: true);
+    var unknownRoleName = $"UNKNOWN-{Guid.NewGuid()}";
+    var user = new DynamoDbUser
+    {
+      Roles = new() { roleName.ToUpperInvariant(), unknownRoleName },
+    };
+    await userStore.CreateAsync(user, CancellationToken.None);
+    var loadedUser = new DynamoDbUser { Id = user.Id };
+
+    // Act
+    var roles = await userStore.GetRolesAsync(loadedUser, CancellationToken.None);
+
+    // Assert
+    Assert.Equal([roleName, unknownRoleName], roles);
+    Assert.Equal([roleName.ToUpperInvariant(), unknownRoleName], loadedUser.Roles);
+  }
+
+  [Fact]
+  public async Task Should_RemoveRole_When_RoleNamesAreResolved()
+  {
+    // Arrange
+    var (userStore, roleName) = await CreateUserStoreWithRole(resolveRoleNames: true);
+    var normalizedRoleName = roleName.ToUpperInvariant();
+    var user = new DynamoDbUser
+    {
+      Roles = new() { normalizedRoleName },
+    };
+    await userStore.CreateAsync(user, CancellationToken.None);
+    user = (await userStore.FindByIdAsync(user.Id, CancellationToken.None))!;
+    Assert.Equal([roleName], await userStore.GetRolesAsync(user, CancellationToken.None));
+
+    // Act
+    await userStore.RemoveFromRoleAsync(user, normalizedRoleName, CancellationToken.None);
+    await userStore.UpdateAsync(user, CancellationToken.None);
+
+    // Assert
+    Assert.Empty(await userStore.GetRolesAsync(new DynamoDbUser { Id = user.Id }, CancellationToken.None));
+    Assert.Empty(await userStore.GetRawRoles(user, CancellationToken.None));
+  }
+
+  private static async Task<(DynamoDbUserStore<DynamoDbUser> UserStore, string RoleName)> CreateUserStoreWithRole(
+    bool resolveRoleNames)
+  {
+    var options = TestUtils.GetOptions(new()
+    {
+      Database = DatabaseFixture.Client,
+      ResolveRoleNames = resolveRoleNames,
+    });
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
+    var roleName = $"Role-{Guid.NewGuid()}";
+    await new DynamoDbRoleStore<DynamoDbRole>(options).CreateAsync(new DynamoDbRole
+    {
+      Name = roleName,
+      NormalizedName = roleName.ToUpperInvariant(),
+    }, CancellationToken.None);
+    return (new DynamoDbUserStore<DynamoDbUser>(options), roleName);
   }
 
   [Fact]
