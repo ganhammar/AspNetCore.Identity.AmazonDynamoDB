@@ -19,8 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.107" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.10.0" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.107.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.11.0" />
   </ItemGroup>
 
   <!--
@@ -29,11 +29,11 @@
     (such as Microsoft.AspNetCore.Cryptography.Internal) and breaks Data Protection.
   -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.31" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.21" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.20" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="9.0.21" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
