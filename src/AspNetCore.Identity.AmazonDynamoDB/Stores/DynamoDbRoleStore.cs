@@ -1,7 +1,5 @@
 ﻿using System.Security.Claims;
 using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -12,8 +10,8 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     IRoleClaimStore<TRoleEntity>
   where TRoleEntity : DynamoDbRole, new()
 {
+  private static readonly IdentityErrorDescriber Errors = new();
   private readonly IAmazonDynamoDB _client;
-  private readonly IDynamoDBContext _context;
   private readonly IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
   private string _tableName =>
     _optionsMonitor.CurrentValue.DefaultTableName ?? Constants.DefaultTableName;
@@ -33,9 +31,6 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
 
     _client = database ?? options.Database!;
     _optionsMonitor = optionsMonitor;
-    _context = new DynamoDBContextBuilder()
-      .WithDynamoDBClient(() => _client)
-      .Build();
   }
 
   public Task AddClaimAsync(TRoleEntity role, Claim claim, CancellationToken cancellationToken = default)
@@ -55,11 +50,33 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return Task.CompletedTask;
   }
 
+  // The role and the lookup of its normalized name are written together, so a name that another
+  // role holds fails the whole write
   public async Task<IdentityResult> CreateAsync(TRoleEntity role, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    await _context.SaveAsync(role, GetSaveConfig(), cancellationToken);
+    var items = new List<TransactWriteItem>
+    {
+      DynamoDbItems.TransactPut(_tableName, role, "attribute_not_exists(PartitionKey)"),
+    };
+
+    if (role.NormalizedName is { } normalizedName)
+    {
+      items.Add(DynamoDbItems.TransactPut(
+        _tableName, new LookupItem(Lookups.RoleName(normalizedName), role.Id, role.Name), "attribute_not_exists(PartitionKey)"));
+    }
+
+    try
+    {
+      await DynamoDbItems.TransactWriteAsync(_client, items, cancellationToken);
+    }
+    catch (TransactionCanceledException exception)
+    {
+      return IdentityResult.Failed(DynamoDbItems.FailedConditions(exception).Contains(1)
+        ? Errors.DuplicateRoleName(role.Name ?? role.NormalizedName!)
+        : new IdentityError { Code = "DuplicateRoleId", Description = $"A role with the id {role.Id} already exists" });
+    }
 
     return IdentityResult.Success;
   }
@@ -68,7 +85,19 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
   {
     ArgumentNullException.ThrowIfNull(role);
 
-    await _context.DeleteAsync(role, GetDeleteConfig(), cancellationToken);
+    // The stored role names the lookup to remove, which a renamed one in memory would not
+    var stored = await FindByIdAsync(role.Id, cancellationToken);
+    var items = new List<TransactWriteItem>
+    {
+      DynamoDbItems.TransactDelete(_tableName, role.PartitionKey, role.SortKey),
+    };
+
+    if (stored?.NormalizedName is { } normalizedName)
+    {
+      items.Add(DeleteLookup(Lookups.RoleName(normalizedName), role.Id));
+    }
+
+    await DynamoDbItems.TransactWriteAsync(_client, items, cancellationToken);
 
     return IdentityResult.Success;
   }
@@ -81,30 +110,18 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     {
       Id = roleId,
     };
-    return await _context.LoadAsync<TRoleEntity>(role.PartitionKey, role.SortKey, GetLoadConfig(), cancellationToken);
+    return await DynamoDbItems.GetAsync<TRoleEntity>(
+      _client, _tableName, role.PartitionKey, role.SortKey, cancellationToken, consistentRead: true);
   }
 
   public async Task<TRoleEntity?> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedRoleName);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<TRoleEntity>(new QueryOperationConfig
-    {
-      IndexName = "NormalizedName-index",
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "NormalizedName = :normalizedRoleName",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":normalizedRoleName", normalizedRoleName },
-        },
-      },
-      Limit = 1,
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var roles = await search.GetRemainingAsync(cancellationToken);
-    return roles?.FirstOrDefault()!; // Hide compiler warning until Identity handles nullable (v7)
+    var lookup = await DynamoDbItems.GetAsync<LookupItem>(
+      _client, _tableName, Lookups.RoleName(normalizedRoleName), Lookups.SortKey, cancellationToken, consistentRead: true);
+
+    return lookup is null ? default! : (await FindByIdAsync(lookup.Id, cancellationToken))!; // Hide compiler warning until Identity handles nullable (v7)
   }
 
   public Task<IList<Claim>> GetClaimsAsync(TRoleEntity role, CancellationToken cancellationToken = default)
@@ -175,74 +192,73 @@ public class DynamoDbRoleStore<TRoleEntity> : IRoleStore<TRoleEntity>,
     return Task.CompletedTask;
   }
 
+  // The role is written only when it still has the concurrency stamp it was loaded with, and its
+  // name lookup moves with a renamed role in the same transaction
   public async Task<IdentityResult> UpdateAsync(TRoleEntity role, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(role);
 
+    var stored = await FindByIdAsync(role.Id, cancellationToken);
+
+    if (stored is null)
+    {
+      return IdentityResult.Failed(Errors.ConcurrencyFailure());
+    }
+
     var concurrencyStamp = role.ConcurrencyStamp;
     role.ConcurrencyStamp = Guid.NewGuid().ToString();
 
+    var items = new List<TransactWriteItem>
+    {
+      DynamoDbItems.TransactPut(
+        _tableName,
+        role,
+        concurrencyStamp is null
+          ? "attribute_exists(PartitionKey) and attribute_not_exists(ConcurrencyStamp)"
+          : "attribute_exists(PartitionKey) and ConcurrencyStamp = :concurrencyStamp",
+        concurrencyStamp is null ? default : new() { { ":concurrencyStamp", new AttributeValue { S = concurrencyStamp } } }),
+    };
+
+    if (stored.NormalizedName is { } previousName && previousName != role.NormalizedName)
+    {
+      items.Add(DeleteLookup(Lookups.RoleName(previousName), role.Id));
+    }
+
+    var lookupIndex = -1;
+    if (role.NormalizedName is { } normalizedName)
+    {
+      lookupIndex = items.Count;
+      items.Add(DynamoDbItems.TransactPut(
+        _tableName,
+        new LookupItem(Lookups.RoleName(normalizedName), role.Id, role.Name),
+        "attribute_not_exists(PartitionKey) or Id = :id",
+        new() { { ":id", new AttributeValue { S = role.Id } } }));
+    }
+
     try
     {
-      // Ensure no one else has updated the role since it was loaded
-      await _context.SaveAsync(role, GetSaveConfig(concurrencyStamp), cancellationToken);
+      await DynamoDbItems.TransactWriteAsync(_client, items, cancellationToken);
     }
-    catch (ConditionalCheckFailedException)
+    catch (TransactionCanceledException exception)
     {
       role.ConcurrencyStamp = concurrencyStamp;
+      var failed = DynamoDbItems.FailedConditions(exception);
 
-      return IdentityResult.Failed(new IdentityError
-      {
-        Code = "ConcurrencyFailure",
-        Description = "ConcurrencyStamp mismatch",
-      });
+      return IdentityResult.Failed(failed.Contains(lookupIndex) && !failed.Contains(0)
+        ? Errors.DuplicateRoleName(role.Name ?? role.NormalizedName!)
+        : Errors.ConcurrencyFailure());
     }
 
     return IdentityResult.Success;
   }
 
-  private DynamoDBOperationConfig GetOperationConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private SaveConfig GetSaveConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private SaveConfig GetSaveConfig(string? concurrencyStamp)
-  {
-    // Only save when the role exists and still has the concurrency stamp it was loaded with
-    var condition = new ContextExpression();
-
-    if (concurrencyStamp == default)
-    {
-      condition.SetFilter<TRoleEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
-        && ContextExpression.AttributeNotExists(x.ConcurrencyStamp));
-    }
-    else
-    {
-      condition.SetFilter<TRoleEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
-        && x.ConcurrencyStamp == concurrencyStamp);
-    }
-
-    return new()
-    {
-      OverrideTableName = _tableName,
-      ConditionalExpression = condition,
-    };
-  }
-
-  private LoadConfig GetLoadConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private DeleteConfig GetDeleteConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
+  // Removes a lookup that points at the role, or is already gone
+  private TransactWriteItem DeleteLookup(string partitionKey, string roleId) => DynamoDbItems.TransactDelete(
+    _tableName,
+    partitionKey,
+    Lookups.SortKey,
+    "attribute_not_exists(PartitionKey) or Id = :id",
+    new() { { ":id", new AttributeValue { S = roleId } } });
 
   protected virtual void Dispose(bool disposing)
   {

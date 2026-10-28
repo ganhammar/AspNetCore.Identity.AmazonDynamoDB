@@ -562,6 +562,9 @@ public class DynamoDbUserStoreTests
     };
     await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
+    // Items written by version 2 have no lookup items, the migration adds them
+    await DynamoDbTableSetup.MigrateAsync(options.CurrentValue, DatabaseFixture.Client);
+
     // Act
     var foundUser = await userStore.FindByEmailAsync(user.NormalizedEmail, CancellationToken.None);
 
@@ -713,6 +716,9 @@ public class DynamoDbUserStoreTests
     };
     await context.SaveAsync(login);
 
+    // Items written by version 2 have no lookup items, the migration adds them
+    await DynamoDbTableSetup.MigrateAsync(options.CurrentValue, DatabaseFixture.Client);
+
     // Act
     var foundUser = await userStore.FindByLoginAsync(
       login.LoginProvider, login.ProviderKey, CancellationToken.None);
@@ -766,6 +772,9 @@ public class DynamoDbUserStoreTests
       NormalizedUserName = "TEST-UNIQUE-NAME",
     };
     await context.SaveAsync(user, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
+
+    // Items written by version 2 have no lookup items, the migration adds them
+    await DynamoDbTableSetup.MigrateAsync(options.CurrentValue, DatabaseFixture.Client);
 
     // Act
     var foundUser = await userStore.FindByNameAsync(user.NormalizedUserName, CancellationToken.None);
@@ -2063,6 +2072,9 @@ public class DynamoDbUserStoreTests
       await context.SaveAsync(login);
     }
 
+    // Items written by version 2 have no lookup items, the migration adds them
+    await DynamoDbTableSetup.MigrateAsync(options.CurrentValue, DatabaseFixture.Client);
+
     // Act
     var users = await userStore.GetUsersInRoleAsync(roleName, CancellationToken.None);
 
@@ -2336,6 +2348,9 @@ public class DynamoDbUserStoreTests
       };
       await context.SaveAsync(login);
     }
+
+    // Items written by version 2 have no lookup items, the migration adds them
+    await DynamoDbTableSetup.MigrateAsync(options.CurrentValue, DatabaseFixture.Client);
 
     // Act
     var users = await userStore.GetUsersForClaimAsync(new Claim(claimType, claimValue), CancellationToken.None);

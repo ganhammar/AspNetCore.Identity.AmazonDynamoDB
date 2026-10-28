@@ -33,14 +33,23 @@ internal class DynamoDbUtils
     } while (!active);
   }
 
-  // BatchWriteItem accepts at most 25 requests and can leave some of them unprocessed
+  // BatchWriteItem accepts at most 25 requests, none of them for the same key, and can leave some
+  // of them unprocessed. Of several requests for one key the last is written.
   public static async Task BatchWriteAsync(
     IAmazonDynamoDB client,
     string tableName,
     IEnumerable<WriteRequest> requests,
     CancellationToken cancellationToken = default)
   {
-    foreach (var chunk in requests.Chunk(MaxBatchWriteSize))
+    var distinct = new Dictionary<(string, string?), WriteRequest>();
+
+    foreach (var request in requests)
+    {
+      var key = request.PutRequest?.Item ?? request.DeleteRequest?.Key ?? throw new ArgumentException("A write request puts or deletes an item", nameof(requests));
+      distinct[(key["PartitionKey"].S, key.GetValueOrDefault("SortKey")?.S)] = request;
+    }
+
+    foreach (var chunk in distinct.Values.Chunk(MaxBatchWriteSize))
     {
       var unprocessed = chunk.ToList();
 

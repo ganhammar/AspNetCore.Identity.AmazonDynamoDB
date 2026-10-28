@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>2.2.0</Version>
+    <Version>3.0.0</Version>
+    <IsAotCompatible>true</IsAotCompatible>
     <Authors>Anton Ganhammar</Authors>
     <RepositoryUrl>https://github.com/ganhammar/AspNetCore.Identity.AmazonDynamoDB</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -16,11 +17,11 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <InternalsVisibleTo Include="AspNetCore.Identity.AmazonDynamoDB.Tests" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.107" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.10.0" />
   </ItemGroup>
 
   <!--
