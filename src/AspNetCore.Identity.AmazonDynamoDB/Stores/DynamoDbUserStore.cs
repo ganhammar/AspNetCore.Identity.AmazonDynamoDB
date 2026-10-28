@@ -1,7 +1,5 @@
 ﻿using System.Security.Claims;
 using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -28,14 +26,18 @@ public class DynamoDbUserStore<TUserEntity> :
     IProtectedUserStore<TUserEntity>
   where TUserEntity : DynamoDbUser, new()
 {
+  private static readonly IdentityErrorDescriber Errors = new();
   private readonly IAmazonDynamoDB _client;
-  private readonly IDynamoDBContext _context;
   private readonly IOptionsMonitor<DynamoDbOptions> _optionsMonitor;
   private string _tableName =>
     _optionsMonitor.CurrentValue.DefaultTableName ?? Constants.DefaultTableName;
   private const string InternalLoginProvider = "[AspNetUserStore]";
   private const string AuthenticatorKeyTokenName = "AuthenticatorKey";
   private const string RecoveryCodeTokenName = "RecoveryCodes";
+  private const string ClaimSortKeyPrefix = "CLAIM#";
+  private const string LoginSortKeyPrefix = "LOGIN#";
+  private const string RoleSortKeyPrefix = "ROLE#";
+  private const string TokenSortKeyPrefix = "TOKEN#";
   private const string PasskeySortKeyPrefix = "PASSKEY#";
 
   public DynamoDbUserStore(
@@ -53,9 +55,6 @@ public class DynamoDbUserStore<TUserEntity> :
 
     _client = database ?? options.Database!;
     _optionsMonitor = optionsMonitor;
-    _context = new DynamoDBContextBuilder()
-      .WithDynamoDBClient(() => _client)
-      .Build();
   }
 
   public async Task AddClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
@@ -124,34 +123,92 @@ public class DynamoDbUserStore<TUserEntity> :
     }
   }
 
+  /// <summary>The lookup and membership items a user's own attributes give: its username and its email.</summary>
+  internal static IEnumerable<IDynamoDbItem> LookupsOf(DynamoDbUser user)
+  {
+    if (user.NormalizedUserName is { } userName)
+    {
+      yield return new LookupItem(Lookups.UserName(userName), user.Id);
+    }
+
+    if (user.NormalizedEmail is { } email)
+    {
+      yield return new MembershipItem(Lookups.Email(email), user.Id);
+    }
+  }
+
+  // The user and the lookup of its username are written together, so a username that another
+  // user holds fails the whole write. Claims, logins, roles, tokens and passkeys follow, each
+  // login and passkey together with its own lookup.
   public async Task<IdentityResult> CreateAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
     cancellationToken.ThrowIfCancellationRequested();
 
-    await _context.SaveAsync(user, GetSaveConfig(), cancellationToken);
-    await SaveClaims(user, cancellationToken);
-    await SaveLogins(user, cancellationToken);
-    await SaveRoles(user, cancellationToken);
-    await SaveTokens(user, cancellationToken);
-    await SavePasskeys(user, cancellationToken);
+    var items = new List<TransactWriteItem>
+    {
+      DynamoDbItems.TransactPut(_tableName, user, "attribute_not_exists(PartitionKey)"),
+    };
+    var userNameIndex = -1;
+
+    if (user.NormalizedUserName is { } userName)
+    {
+      userNameIndex = items.Count;
+      items.Add(DynamoDbItems.TransactPut(
+        _tableName, new LookupItem(Lookups.UserName(userName), user.Id), "attribute_not_exists(PartitionKey)"));
+    }
+
+    if (user.NormalizedEmail is { } email)
+    {
+      items.Add(DynamoDbItems.TransactPut(_tableName, new MembershipItem(Lookups.Email(email), user.Id)));
+    }
+
+    try
+    {
+      await DynamoDbItems.TransactWriteAsync(_client, items, cancellationToken);
+    }
+    catch (TransactionCanceledException exception)
+    {
+      return IdentityResult.Failed(DynamoDbItems.FailedConditions(exception).Contains(userNameIndex)
+        ? Errors.DuplicateUserName(user.UserName ?? user.NormalizedUserName!)
+        : new IdentityError { Code = "DuplicateUserId", Description = $"A user with the id {user.Id} already exists" });
+    }
+
+    return await SaveRelatedItems(user, cancellationToken);
+  }
+
+  private async Task<IdentityResult> SaveRelatedItems(TUserEntity user, CancellationToken cancellationToken)
+  {
+    try
+    {
+      await SaveClaims(user, cancellationToken);
+      await SaveLogins(user, cancellationToken);
+      await SaveRoles(user, cancellationToken);
+      await SaveTokens(user, cancellationToken);
+      await SavePasskeys(user, cancellationToken);
+    }
+    catch (LookupConflictException exception)
+    {
+      return IdentityResult.Failed(exception.Error);
+    }
 
     return IdentityResult.Success;
   }
 
+  // Removes everything in the user's partition and the lookups that point into it, the user
+  // item last so that a delete that fails halfway can be retried
   public async Task<IdentityResult> DeleteAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
-    var keys = new List<Dictionary<string, AttributeValue>>();
+    var items = new List<Dictionary<string, AttributeValue>>();
     Dictionary<string, AttributeValue>? exclusiveStartKey = default;
 
     do
     {
       var query = await _client.QueryAsync(new()
       {
-        ProjectionExpression = "PartitionKey, SortKey",
         TableName = _tableName,
         KeyConditionExpression = "PartitionKey = :partitionKey",
         ExpressionAttributeValues = new()
@@ -162,52 +219,130 @@ public class DynamoDbUserStore<TUserEntity> :
         ConsistentRead = true,
       }, cancellationToken);
 
-      keys.AddRange(query.Items ?? new());
+      items.AddRange(query.Items ?? new());
       exclusiveStartKey = query.LastEvaluatedKey;
     } while (exclusiveStartKey?.Count > 0);
 
-    // Delete the user item last, so that a delete that fails halfway can be retried
-    var requests = keys
-      .OrderBy(x => x["SortKey"].S == user.SortKey)
-      .Select(x => new WriteRequest(new DeleteRequest(x)));
+    var requests = new List<WriteRequest>();
+
+    foreach (var item in items.OrderBy(x => x["SortKey"].S == user.SortKey))
+    {
+      requests.AddRange(LookupsOf(item).Select(x => new WriteRequest(new DeleteRequest(DynamoDbItems.Key(x)))));
+      requests.Add(new WriteRequest(new DeleteRequest(DynamoDbItems.Key(item["PartitionKey"].S, item["SortKey"].S))));
+    }
 
     await DynamoDbUtils.BatchWriteAsync(_client, _tableName, requests, cancellationToken);
 
     return IdentityResult.Success;
   }
 
+  // The lookup and membership items of one item in a user's partition
+  private static IEnumerable<IDynamoDbItem> LookupsOf(Dictionary<string, AttributeValue> item)
+  {
+    var sortKey = item.GetString("SortKey") ?? "";
+
+    if (sortKey.StartsWith("#USER#", StringComparison.Ordinal))
+    {
+      return LookupsOf(DynamoDbItems.FromItem<DynamoDbUser>(item));
+    }
+
+    if (sortKey.StartsWith(ClaimSortKeyPrefix, StringComparison.Ordinal))
+    {
+      return LookupsOf(DynamoDbItems.FromItem<DynamoDbUserClaim>(item));
+    }
+
+    if (sortKey.StartsWith(LoginSortKeyPrefix, StringComparison.Ordinal))
+    {
+      return LookupsOf(DynamoDbItems.FromItem<DynamoDbUserLogin>(item));
+    }
+
+    if (sortKey.StartsWith(RoleSortKeyPrefix, StringComparison.Ordinal))
+    {
+      return LookupsOf(DynamoDbItems.FromItem<DynamoDbUserRole>(item));
+    }
+
+    if (sortKey.StartsWith(PasskeySortKeyPrefix, StringComparison.Ordinal))
+    {
+      return LookupsOf(DynamoDbItems.FromItem<DynamoDbUserPasskey>(item));
+    }
+
+    return [];
+  }
+
+  private static IEnumerable<IDynamoDbItem> LookupsOf(DynamoDbUserClaim claim)
+  {
+    if (claim is { UserId: not null, ClaimType: not null, ClaimValue: not null })
+    {
+      yield return new MembershipItem(Lookups.ClaimMembers(claim.ClaimType, claim.ClaimValue), claim.UserId);
+    }
+  }
+
+  private static IEnumerable<IDynamoDbItem> LookupsOf(DynamoDbUserLogin login)
+  {
+    if (login is { UserId: not null, LoginProvider: not null, ProviderKey: not null })
+    {
+      yield return new LookupItem(Lookups.Login(login.LoginProvider, login.ProviderKey), login.UserId);
+    }
+  }
+
+  private static IEnumerable<IDynamoDbItem> LookupsOf(DynamoDbUserRole role)
+  {
+    if (role is { UserId: not null, RoleName: not null })
+    {
+      yield return new MembershipItem(Lookups.RoleMembers(role.RoleName), role.UserId);
+    }
+  }
+
+  private static IEnumerable<IDynamoDbItem> LookupsOf(DynamoDbUserPasskey passkey)
+  {
+    if (passkey is { UserId: not null, CredentialId: not null })
+    {
+      yield return new LookupItem(Lookups.Passkey(passkey.CredentialId), passkey.UserId);
+    }
+  }
+
+  private Task<TUserEntity?> GetUser(string userId, CancellationToken cancellationToken)
+  {
+    var user = new DynamoDbUser
+    {
+      Id = userId,
+    };
+    return DynamoDbItems.GetAsync<TUserEntity>(_client, _tableName, user.PartitionKey, user.SortKey, cancellationToken, consistentRead: true);
+  }
+
+  // The user a lookup item points at, when the value is taken
+  private async Task<TUserEntity?> FindByLookup(string partitionKey, CancellationToken cancellationToken)
+  {
+    var lookup = await DynamoDbItems.GetAsync<LookupItem>(
+      _client, _tableName, partitionKey, Lookups.SortKey, cancellationToken, consistentRead: true);
+
+    return lookup is null ? default : await GetUser(lookup.Id, cancellationToken);
+  }
+
+  // Users may share an email, so the first of them is returned, as the index returned one of them
   public async Task<TUserEntity?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedEmail);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
+    var member = await DynamoDbItems.QueryFirstAsync<MembershipItem>(_client, new QueryRequest
     {
-      IndexName = "NormalizedEmail-index",
-      KeyExpression = new Expression
+      TableName = _tableName,
+      KeyConditionExpression = "PartitionKey = :partitionKey",
+      ExpressionAttributeValues = new()
       {
-        ExpressionStatement = "NormalizedEmail = :email",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":email", normalizedEmail },
-        },
+        { ":partitionKey", new AttributeValue { S = Lookups.Email(normalizedEmail) } },
       },
-      Limit = 1
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var users = await search.GetRemainingAsync(cancellationToken);
-    return users.FirstOrDefault();
+      ConsistentRead = true,
+    }, cancellationToken);
+
+    return member is null ? default : await GetUser(member.UserId, cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByIdAsync(string userId, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(userId);
 
-    var user = new DynamoDbUser
-    {
-      Id = userId,
-    };
-    return await _context.LoadAsync<TUserEntity>(user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
+    return await GetUser(userId, cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByLoginAsync(
@@ -216,58 +351,14 @@ public class DynamoDbUserStore<TUserEntity> :
     ArgumentNullException.ThrowIfNull(loginProvider);
     ArgumentNullException.ThrowIfNull(providerKey);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
-    {
-      IndexName = "LoginProvider-ProviderKey-index",
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "LoginProvider = :loginProvider AND ProviderKey = :providerKey",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":loginProvider", loginProvider },
-          { ":providerKey", providerKey },
-        },
-      },
-      Limit = 1
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var logins = await search.GetNextSetAsync(cancellationToken);
-
-    if (logins.Any() == false || logins.First().UserId == default)
-    {
-      return default;
-    }
-
-    var user = new DynamoDbUser
-    {
-      Id = logins.First().UserId!,
-    };
-    return await _context.LoadAsync<TUserEntity>(
-      user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
+    return await FindByLookup(Lookups.Login(loginProvider, providerKey), cancellationToken);
   }
 
   public async Task<TUserEntity?> FindByNameAsync(string normalizedUserName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(normalizedUserName);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<TUserEntity>(new QueryOperationConfig
-    {
-      IndexName = "NormalizedUserName-index",
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "NormalizedUserName = :normalizedUserName",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":normalizedUserName", normalizedUserName },
-        },
-      },
-      Limit = 1
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var users = await search.GetRemainingAsync(cancellationToken);
-    return users.FirstOrDefault();
+    return await FindByLookup(Lookups.UserName(normalizedUserName), cancellationToken);
   }
 
   public Task<int> GetAccessFailedCountAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -277,24 +368,13 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.FromResult(user.AccessFailedCount);
   }
 
-  private async Task<List<DynamoDbUserClaim>> GetRawClaims(TUserEntity user, CancellationToken cancellationToken)
-  {
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", user.PartitionKey },
-          { ":sortKey", "CLAIM#" },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    return await search.GetRemainingAsync(cancellationToken);
-  }
+  // The items of one kind in the user's partition: claims, logins, roles, tokens or passkeys
+  private Task<List<T>> GetRawItems<T>(TUserEntity user, string sortKeyPrefix, CancellationToken cancellationToken)
+    where T : IDynamoDbItem, new()
+    => DynamoDbItems.QueryPartitionAsync<T>(_client, _tableName, user.PartitionKey, sortKeyPrefix, cancellationToken, consistentRead: true);
+
+  private Task<List<DynamoDbUserClaim>> GetRawClaims(TUserEntity user, CancellationToken cancellationToken)
+    => GetRawItems<DynamoDbUserClaim>(user, ClaimSortKeyPrefix, cancellationToken);
 
   private static Dictionary<string, List<string>> ToDictionary(List<DynamoDbUserClaim> claims) => claims
     .GroupBy(x => x.ClaimType)
@@ -343,24 +423,8 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.FromResult(user.LockoutEnd);
   }
 
-  public async Task<List<DynamoDbUserLogin>> GetRawLogins(TUserEntity user, CancellationToken cancellationToken)
-  {
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserLogin>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", user.PartitionKey },
-          { ":sortKey", "LOGIN#" },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    return await search.GetRemainingAsync(cancellationToken);
-  }
+  public Task<List<DynamoDbUserLogin>> GetRawLogins(TUserEntity user, CancellationToken cancellationToken)
+    => GetRawItems<DynamoDbUserLogin>(user, LoginSortKeyPrefix, cancellationToken);
 
   public async Task<IList<UserLoginInfo>> GetLoginsAsync(
     TUserEntity user, CancellationToken cancellationToken)
@@ -415,24 +479,8 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.FromResult(user.PhoneNumberConfirmed);
   }
 
-  public async Task<List<DynamoDbUserRole>> GetRawRoles(TUserEntity user, CancellationToken cancellationToken)
-  {
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", $"USER#{user.Id}" },
-          { ":sortKey", "ROLE#" },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    return await search.GetRemainingAsync(cancellationToken);
-  }
+  public Task<List<DynamoDbUserRole>> GetRawRoles(TUserEntity user, CancellationToken cancellationToken)
+    => GetRawItems<DynamoDbUserRole>(user, RoleSortKeyPrefix, cancellationToken);
 
   public async Task<IList<string>> GetRolesAsync(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -454,27 +502,13 @@ public class DynamoDbUserStore<TUserEntity> :
     return roleNames.ToList();
   }
 
+  // The role's name is kept on its name lookup, so resolving it is one read
   private async Task<string> GetRoleName(string normalizedRoleName, CancellationToken cancellationToken)
   {
-    var response = await _client.QueryAsync(new QueryRequest
-    {
-      TableName = _tableName,
-      IndexName = "NormalizedName-index",
-      KeyConditionExpression = "NormalizedName = :normalizedName",
-      ProjectionExpression = "#name",
-      ExpressionAttributeNames = new()
-      {
-        { "#name", "Name" },
-      },
-      ExpressionAttributeValues = new()
-      {
-        { ":normalizedName", new(normalizedRoleName) },
-      },
-      Limit = 1,
-    }, cancellationToken);
+    var lookup = await DynamoDbItems.GetAsync<LookupItem>(
+      _client, _tableName, Lookups.RoleName(normalizedRoleName), Lookups.SortKey, cancellationToken, consistentRead: true);
 
-    var roleName = response.Items?.FirstOrDefault()?.GetValueOrDefault("Name")?.S;
-    return string.IsNullOrEmpty(roleName) ? normalizedRoleName : roleName;
+    return string.IsNullOrEmpty(lookup?.Name) ? normalizedRoleName : lookup.Name;
   }
 
   public Task<string?> GetSecurityStampAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -509,71 +543,28 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(claim);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserClaim>(new QueryOperationConfig
-    {
-      IndexName = "ClaimType-ClaimValue-index",
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "ClaimType = :claimType and ClaimValue = :claimValue",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":claimType", claim.Type },
-          { ":claimValue", claim.Value },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var userClaims = await search.GetRemainingAsync(cancellationToken);
-
-    var batch = _context.CreateBatchGet<TUserEntity>(GetBatchGetConfig());
-    foreach (var userId in userClaims.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
-    {
-      var user = new DynamoDbUser
-      {
-        Id = userId!,
-      };
-      batch.AddKey(user.PartitionKey, user.SortKey);
-    }
-
-    await batch.ExecuteAsync(cancellationToken);
-
-    return batch.Results;
+    return await GetMembers(Lookups.ClaimMembers(claim.Type, claim.Value), cancellationToken);
   }
 
   public async Task<IList<TUserEntity>> GetUsersInRoleAsync(string roleName, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(roleName);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
-    {
-      IndexName = "RoleName-index",
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "RoleName = :roleName",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":roleName", roleName },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var userRoles = await search.GetRemainingAsync(cancellationToken);
+    return await GetMembers(Lookups.RoleMembers(roleName), cancellationToken);
+  }
 
-    var batch = _context.CreateBatchGet<TUserEntity>(GetBatchGetConfig());
-    foreach (var userId in userRoles.Where(x => x.UserId != default).Select(x => x.UserId).Distinct())
-    {
-      var user = new DynamoDbUser
-      {
-        Id = userId!,
-      };
-      batch.AddKey(user.PartitionKey, user.SortKey);
-    }
+  // The users listed in a membership partition
+  private async Task<IList<TUserEntity>> GetMembers(string partitionKey, CancellationToken cancellationToken)
+  {
+    var members = await DynamoDbItems.QueryPartitionAsync<MembershipItem>(
+      _client, _tableName, partitionKey, default, cancellationToken, consistentRead: true);
+    var keys = members
+      .Select(x => x.UserId)
+      .Distinct()
+      .Select(x => new DynamoDbUser { Id = x })
+      .Select(DynamoDbItems.Key);
 
-    await batch.ExecuteAsync(cancellationToken);
-
-    return batch.Results;
+    return await DynamoDbItems.BatchGetAsync<TUserEntity>(_client, _tableName, keys, cancellationToken);
   }
 
   public Task<bool> HasPasswordAsync(TUserEntity user, CancellationToken cancellationToken)
@@ -601,24 +592,10 @@ public class DynamoDbUserStore<TUserEntity> :
       UserId = user.Id,
       RoleName = roleName,
     };
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserRole>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and SortKey = :sortKey",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", userRole.PartitionKey },
-          { ":sortKey", userRole.SortKey },
-        },
-      },
-      Limit = 1,
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var roles = await search.GetRemainingAsync(cancellationToken);
+    var role = await DynamoDbItems.GetAsync<DynamoDbUserRole>(
+      _client, _tableName, userRole.PartitionKey, userRole.SortKey, cancellationToken, consistentRead: true);
 
-    return roles.Any();
+    return role != default;
   }
 
   public async Task RemoveClaimsAsync(TUserEntity user, IEnumerable<Claim> claims, CancellationToken cancellationToken)
@@ -765,40 +742,143 @@ public class DynamoDbUserStore<TUserEntity> :
     return Task.CompletedTask;
   }
 
+  // The user is written only when it still has the concurrency stamp it was loaded with, and the
+  // lookups of its username and email move with changed values in the same transaction
   public async Task<IdentityResult> UpdateAsync(TUserEntity user, CancellationToken cancellationToken)
   {
     ArgumentNullException.ThrowIfNull(user);
 
+    var stored = await GetUser(user.Id, cancellationToken);
+
+    if (stored is null)
+    {
+      return IdentityResult.Failed(Errors.ConcurrencyFailure());
+    }
+
     var concurrencyStamp = user.ConcurrencyStamp;
     user.ConcurrencyStamp = Guid.NewGuid().ToString();
 
+    var items = new List<TransactWriteItem>
+    {
+      DynamoDbItems.TransactPut(
+        _tableName,
+        user,
+        concurrencyStamp is null
+          ? "attribute_exists(PartitionKey) and attribute_not_exists(ConcurrencyStamp)"
+          : "attribute_exists(PartitionKey) and ConcurrencyStamp = :concurrencyStamp",
+        concurrencyStamp is null ? default : new() { { ":concurrencyStamp", new AttributeValue { S = concurrencyStamp } } }),
+    };
+    var userNameIndex = -1;
+
+    if (stored.NormalizedUserName != user.NormalizedUserName)
+    {
+      if (stored.NormalizedUserName is { } previousUserName)
+      {
+        items.Add(DeleteLookup(Lookups.UserName(previousUserName), user.Id));
+      }
+
+      if (user.NormalizedUserName is { } userName)
+      {
+        userNameIndex = items.Count;
+        items.Add(PutLookup(new LookupItem(Lookups.UserName(userName), user.Id), user.Id));
+      }
+    }
+
+    if (stored.NormalizedEmail != user.NormalizedEmail)
+    {
+      if (stored.NormalizedEmail is { } previousEmail)
+      {
+        items.Add(DynamoDbItems.TransactDelete(_tableName, Lookups.Email(previousEmail), Lookups.Member(user.Id)));
+      }
+
+      if (user.NormalizedEmail is { } email)
+      {
+        items.Add(DynamoDbItems.TransactPut(_tableName, new MembershipItem(Lookups.Email(email), user.Id)));
+      }
+    }
+
     try
     {
-      // Ensure no one else has updated the user since it was loaded
-      await _context.SaveAsync(user, GetSaveConfig(concurrencyStamp), cancellationToken);
+      await DynamoDbItems.TransactWriteAsync(_client, items, cancellationToken);
     }
-    catch (ConditionalCheckFailedException)
+    catch (TransactionCanceledException exception)
     {
       user.ConcurrencyStamp = concurrencyStamp;
+      var failed = DynamoDbItems.FailedConditions(exception);
 
-      return IdentityResult.Failed(new IdentityError
-      {
-        Code = "ConcurrencyFailure",
-        Description = "ConcurrencyStamp mismatch",
-      });
+      return IdentityResult.Failed(failed.Contains(userNameIndex) && !failed.Contains(0)
+        ? Errors.DuplicateUserName(user.UserName ?? user.NormalizedUserName!)
+        : Errors.ConcurrencyFailure());
     }
-    await SaveClaims(user, cancellationToken);
-    await SaveLogins(user, cancellationToken);
-    await SaveRoles(user, cancellationToken);
-    await SaveTokens(user, cancellationToken);
-    await SavePasskeys(user, cancellationToken);
 
-    return IdentityResult.Success;
+    return await SaveRelatedItems(user, cancellationToken);
   }
+
+  // Writes a lookup that is free or already points at the user
+  private TransactWriteItem PutLookup(LookupItem lookup, string userId) => DynamoDbItems.TransactPut(
+    _tableName,
+    lookup,
+    "attribute_not_exists(PartitionKey) or Id = :id",
+    new() { { ":id", new AttributeValue { S = userId } } });
+
+  // Removes a lookup that points at the user, or is already gone
+  private TransactWriteItem DeleteLookup(string partitionKey, string userId) => DynamoDbItems.TransactDelete(
+    _tableName,
+    partitionKey,
+    Lookups.SortKey,
+    "attribute_not_exists(PartitionKey) or Id = :id",
+    new() { { ":id", new AttributeValue { S = userId } } });
 
   private static List<KeyValuePair<string, string>> FlattenClaims(TUserEntity user) => user.Claims
       ?.SelectMany(x => x.Value.Select(y => new KeyValuePair<string, string>(x.Key, y)))
       .ToList() ?? new();
+
+  // Deletes the persisted items of one kind that the user no longer holds, with their lookups
+  private async Task RemoveDeletedItems<T>(
+    IEnumerable<T> persisted, IEnumerable<T> current, Func<T, IEnumerable<IDynamoDbItem>> lookupsOf, CancellationToken cancellationToken)
+    where T : IDynamoDbItem
+  {
+    var currentSortKeys = current.Select(x => x.SortKey).ToHashSet();
+    var toBeDeleted = persisted
+      .Where(x => currentSortKeys.Contains(x.SortKey) == false)
+      .SelectMany(x => lookupsOf(x).Append(x))
+      .Select(DynamoDbItems.Delete);
+
+    await DynamoDbUtils.BatchWriteAsync(_client, _tableName, toBeDeleted, cancellationToken);
+  }
+
+  // Writes items of one kind with their membership items, which need no condition
+  private Task PutItems<T>(IEnumerable<T> items, Func<T, IEnumerable<IDynamoDbItem>> lookupsOf, CancellationToken cancellationToken)
+    where T : IDynamoDbItem
+    => DynamoDbUtils.BatchWriteAsync(
+      _client, _tableName, items.SelectMany(x => lookupsOf(x).Append(x)).Select(DynamoDbItems.Put), cancellationToken);
+
+  // Writes an item together with its lookup, which must be free or already point at the user,
+  // so that a login or passkey can belong to one user only
+  private async Task PutWithLookups<T>(T item, Func<T, IEnumerable<IDynamoDbItem>> lookupsOf, string userId, IdentityError conflict, CancellationToken cancellationToken)
+    where T : IDynamoDbItem
+  {
+    var items = new List<TransactWriteItem> { DynamoDbItems.TransactPut(_tableName, item) };
+    items.AddRange(lookupsOf(item).Select(x => PutLookup((LookupItem)x, userId)));
+
+    try
+    {
+      await DynamoDbItems.TransactWriteAsync(_client, items, cancellationToken);
+    }
+    catch (TransactionCanceledException exception) when (DynamoDbItems.FailedConditions(exception).Count > 0)
+    {
+      throw new LookupConflictException(conflict);
+    }
+  }
+
+  private static IEnumerable<DynamoDbUserClaim> CurrentClaims(TUserEntity user) => DynamoDbUserStore<TUserEntity>
+    .FlattenClaims(user)
+    .Select(x => new DynamoDbUserClaim
+    {
+      ClaimType = x.Key,
+      ClaimValue = x.Value,
+      UserId = user.Id,
+    });
 
   public async Task RemoveDeletedClaims(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -808,26 +888,7 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     var persistedClaims = await GetRawClaims(user, cancellationToken);
-    var newClaims = DynamoDbUserStore<TUserEntity>.FlattenClaims(user).Select(x => new DynamoDbUserClaim
-    {
-      ClaimType = x.Key,
-      ClaimValue = x.Value,
-      UserId = user.Id,
-    });
-
-    var toBeDeleted = persistedClaims.Except(newClaims);
-
-    if (toBeDeleted.Any())
-    {
-      var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetBatchWriteConfig());
-
-      foreach (var claim in toBeDeleted)
-      {
-        batch.AddDeleteItem(claim);
-      }
-
-      await batch.ExecuteAsync(cancellationToken);
-    }
+    await RemoveDeletedItems(persistedClaims, CurrentClaims(user), LookupsOf, cancellationToken);
   }
 
   public async Task SaveClaims(TUserEntity user, CancellationToken cancellationToken)
@@ -839,20 +900,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserClaim>(GetBatchWriteConfig());
-    var flattenClaims = DynamoDbUserStore<TUserEntity>.FlattenClaims(user);
-
-    foreach (var claim in flattenClaims)
-    {
-      batch.AddPutItem(new()
-      {
-        ClaimType = claim.Key,
-        ClaimValue = claim.Value,
-        UserId = user.Id,
-      });
-    }
-
-    await batch.ExecuteAsync(cancellationToken);
+    await PutItems(CurrentClaims(user), LookupsOf, cancellationToken);
   }
 
   public async Task RemoveDeletedLogins(TUserEntity user, CancellationToken cancellationToken)
@@ -863,21 +911,7 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     var persistedLogins = await GetRawLogins(user, cancellationToken);
-    var newLogins = user.Logins;
-
-    var toBeDeleted = persistedLogins.Except(newLogins);
-
-    if (toBeDeleted.Any())
-    {
-      var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetBatchWriteConfig());
-
-      foreach (var login in toBeDeleted)
-      {
-        batch.AddDeleteItem(login);
-      }
-
-      await batch.ExecuteAsync(cancellationToken);
-    }
+    await RemoveDeletedItems(persistedLogins, user.Logins, LookupsOf, cancellationToken);
   }
 
   public async Task SaveLogins(TUserEntity user, CancellationToken cancellationToken)
@@ -889,16 +923,19 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserLogin>(GetBatchWriteConfig());
-
-    foreach (var login in user.Logins!)
+    foreach (var login in user.Logins)
     {
       login.UserId = user.Id;
-      batch.AddPutItem(login);
+      await PutWithLookups(login, LookupsOf, user.Id, Errors.LoginAlreadyAssociated(), cancellationToken);
     }
-
-    await batch.ExecuteAsync(cancellationToken);
   }
+
+  private static IEnumerable<DynamoDbUserRole> CurrentRoles(TUserEntity user) => (user.Roles ?? new())
+    .Select(x => new DynamoDbUserRole
+    {
+      RoleName = x,
+      UserId = user.Id,
+    });
 
   public async Task RemoveDeletedRoles(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -908,25 +945,7 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     var persistedRoles = await GetRawRoles(user, cancellationToken);
-    var newRoles = user.Roles.Select(x => new DynamoDbUserRole
-    {
-      RoleName = x,
-      UserId = user.Id,
-    });
-
-    var toBeDeleted = persistedRoles.Except(newRoles);
-
-    if (toBeDeleted.Any())
-    {
-      var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetBatchWriteConfig());
-
-      foreach (var role in toBeDeleted)
-      {
-        batch.AddDeleteItem(role);
-      }
-
-      await batch.ExecuteAsync(cancellationToken);
-    }
+    await RemoveDeletedItems(persistedRoles, CurrentRoles(user), LookupsOf, cancellationToken);
   }
 
   public async Task SaveRoles(TUserEntity user, CancellationToken cancellationToken)
@@ -938,19 +957,17 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserRole>(GetBatchWriteConfig());
-
-    foreach (var role in user.Roles!)
-    {
-      batch.AddPutItem(new()
-      {
-        RoleName = role,
-        UserId = user.Id,
-      });
-    }
-
-    await batch.ExecuteAsync(cancellationToken);
+    await PutItems(CurrentRoles(user), LookupsOf, cancellationToken);
   }
+
+  private static IEnumerable<DynamoDbUserToken> CurrentTokens(TUserEntity user) => (user.Tokens ?? new())
+    .Select(x => new DynamoDbUserToken
+    {
+      UserId = user.Id,
+      LoginProvider = x.LoginProvider,
+      Name = x.Name,
+      Value = x.Value,
+    });
 
   public async Task RemoveDeletedTokens(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -960,27 +977,7 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     var persistedTokens = await GetRawTokens(user, cancellationToken);
-    var newTokens = user.Tokens.Select(x => new DynamoDbUserToken
-    {
-      UserId = user.Id,
-      LoginProvider = x.LoginProvider,
-      Name = x.Name,
-      Value = x.Value,
-    });
-
-    var toBeDeleted = persistedTokens.Except(newTokens);
-
-    if (toBeDeleted.Any())
-    {
-      var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetBatchWriteConfig());
-
-      foreach (var token in toBeDeleted)
-      {
-        batch.AddDeleteItem(token);
-      }
-
-      await batch.ExecuteAsync(cancellationToken);
-    }
+    await RemoveDeletedItems(persistedTokens, CurrentTokens(user), _ => [], cancellationToken);
   }
 
   public async Task SaveTokens(TUserEntity user, CancellationToken cancellationToken)
@@ -992,20 +989,7 @@ public class DynamoDbUserStore<TUserEntity> :
       return;
     }
 
-    var batch = _context.CreateBatchWrite<DynamoDbUserToken>(GetBatchWriteConfig());
-
-    foreach (var token in user.Tokens!)
-    {
-      batch.AddPutItem(new()
-      {
-        UserId = user.Id,
-        LoginProvider = token.LoginProvider,
-        Name = token.Name,
-        Value = token.Value,
-      });
-    }
-
-    await batch.ExecuteAsync(cancellationToken);
+    await PutItems(CurrentTokens(user), _ => [], cancellationToken);
   }
 
   public Task SetAuthenticatorKeyAsync(TUserEntity user, string key, CancellationToken cancellationToken)
@@ -1105,24 +1089,8 @@ public class DynamoDbUserStore<TUserEntity> :
     }
   }
 
-  private async Task<List<DynamoDbUserToken>> GetRawTokens(TUserEntity user, CancellationToken cancellationToken)
-  {
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserToken>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", user.PartitionKey },
-          { ":sortKey", "TOKEN#" },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    return await search.GetRemainingAsync(cancellationToken);
-  }
+  private Task<List<DynamoDbUserToken>> GetRawTokens(TUserEntity user, CancellationToken cancellationToken)
+    => GetRawItems<DynamoDbUserToken>(user, TokenSortKeyPrefix, cancellationToken);
 
   private async Task<IdentityUserToken<string>?> FindTokenAsync(TUserEntity user, string loginProvider, string name, CancellationToken cancellationToken)
   {
@@ -1183,34 +1151,7 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     ArgumentNullException.ThrowIfNull(credentialId);
 
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserPasskey>(new QueryOperationConfig
-    {
-      IndexName = "CredentialId-index",
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "CredentialId = :credentialId",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":credentialId", Base64UrlEncoding.Encode(credentialId) },
-        },
-      },
-      Limit = 1
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    var passkeys = await search.GetNextSetAsync(cancellationToken);
-
-    if (passkeys.Any() == false || passkeys.First().UserId == default)
-    {
-      return default;
-    }
-
-    var user = new DynamoDbUser
-    {
-      Id = passkeys.First().UserId!,
-    };
-    return await _context.LoadAsync<TUserEntity>(
-      user.PartitionKey, user.SortKey, GetLoadConfig(), cancellationToken);
+    return await FindByLookup(Lookups.Passkey(Base64UrlEncoding.Encode(credentialId)), cancellationToken);
   }
 
   public async Task<UserPasskeyInfo?> FindPasskeyAsync(TUserEntity user, byte[] credentialId, CancellationToken cancellationToken)
@@ -1269,24 +1210,8 @@ public class DynamoDbUserStore<TUserEntity> :
   };
 #endif
 
-  private async Task<List<DynamoDbUserPasskey>> GetRawPasskeys(TUserEntity user, CancellationToken cancellationToken)
-  {
-#pragma warning disable CS0618 // Type or member is obsolete - Using DynamoDBOperationConfig is necessary for dynamic table name override via OverrideTableName
-    var search = _context.FromQueryAsync<DynamoDbUserPasskey>(new QueryOperationConfig
-    {
-      KeyExpression = new Expression
-      {
-        ExpressionStatement = "PartitionKey = :partitionKey and begins_with(SortKey, :sortKey)",
-        ExpressionAttributeValues = new Dictionary<string, DynamoDBEntry>
-        {
-          { ":partitionKey", user.PartitionKey },
-          { ":sortKey", PasskeySortKeyPrefix },
-        },
-      },
-    }, GetOperationConfig());
-#pragma warning restore CS0618
-    return await search.GetRemainingAsync(cancellationToken);
-  }
+  private Task<List<DynamoDbUserPasskey>> GetRawPasskeys(TUserEntity user, CancellationToken cancellationToken)
+    => GetRawItems<DynamoDbUserPasskey>(user, PasskeySortKeyPrefix, cancellationToken);
 
   public async Task RemoveDeletedPasskeys(TUserEntity user, CancellationToken cancellationToken)
   {
@@ -1296,23 +1221,7 @@ public class DynamoDbUserStore<TUserEntity> :
     }
 
     var persistedPasskeys = await GetRawPasskeys(user, cancellationToken);
-    var currentSortKeys = user.Passkeys.Select(x => x.SortKey).ToHashSet();
-
-    var toBeDeleted = persistedPasskeys
-      .Where(x => currentSortKeys.Contains(x.SortKey) == false)
-      .ToList();
-
-    if (toBeDeleted.Count > 0)
-    {
-      var batch = _context.CreateBatchWrite<DynamoDbUserPasskey>(GetBatchWriteConfig());
-
-      foreach (var passkey in toBeDeleted)
-      {
-        batch.AddDeleteItem(passkey);
-      }
-
-      await batch.ExecuteAsync(cancellationToken);
-    }
+    await RemoveDeletedItems(persistedPasskeys, user.Passkeys, LookupsOf, cancellationToken);
   }
 
   public async Task SavePasskeys(TUserEntity user, CancellationToken cancellationToken)
@@ -1325,12 +1234,12 @@ public class DynamoDbUserStore<TUserEntity> :
     var persistedPasskeys = (await GetRawPasskeys(user, cancellationToken))
       .ToDictionary(x => x.SortKey);
     var currentSortKeys = user.Passkeys.Select(x => x.SortKey).ToHashSet();
-    var batch = _context.CreateBatchWrite<DynamoDbUserPasskey>(GetBatchWriteConfig());
+    var toBeDeleted = persistedPasskeys.Values
+      .Where(x => currentSortKeys.Contains(x.SortKey) == false)
+      .SelectMany(x => LookupsOf(x).Append(x))
+      .Select(DynamoDbItems.Delete);
 
-    foreach (var passkey in persistedPasskeys.Values.Where(x => currentSortKeys.Contains(x.SortKey) == false))
-    {
-      batch.AddDeleteItem(passkey);
-    }
+    await DynamoDbUtils.BatchWriteAsync(_client, _tableName, toBeDeleted, cancellationToken);
 
     // Passkeys carry the attestation object and client data, so only write the ones that changed
     foreach (var passkey in user.Passkeys)
@@ -1340,11 +1249,14 @@ public class DynamoDbUserStore<TUserEntity> :
       if (persistedPasskeys.TryGetValue(passkey.SortKey, out var persistedPasskey) == false
         || IsEqual(persistedPasskey, passkey) == false)
       {
-        batch.AddPutItem(passkey);
+        await PutWithLookups(
+          passkey,
+          LookupsOf,
+          user.Id,
+          new IdentityError { Code = "DuplicatePasskey", Description = "The passkey is registered to another user" },
+          cancellationToken);
       }
     }
-
-    await batch.ExecuteAsync(cancellationToken);
   }
 
   private static bool IsEqual(DynamoDbUserPasskey left, DynamoDbUserPasskey right) =>
@@ -1361,54 +1273,6 @@ public class DynamoDbUserStore<TUserEntity> :
     && left.IsBackedUp == right.IsBackedUp
     && left.AttestationObject == right.AttestationObject
     && left.ClientDataJson == right.ClientDataJson;
-
-  private DynamoDBOperationConfig GetOperationConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private SaveConfig GetSaveConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private SaveConfig GetSaveConfig(string? concurrencyStamp)
-  {
-    // Only save when the user exists and still has the concurrency stamp it was loaded with
-    var condition = new ContextExpression();
-
-    if (concurrencyStamp == default)
-    {
-      condition.SetFilter<TUserEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
-        && ContextExpression.AttributeNotExists(x.ConcurrencyStamp));
-    }
-    else
-    {
-      condition.SetFilter<TUserEntity>(x => ContextExpression.AttributeExists(x.PartitionKey)
-        && x.ConcurrencyStamp == concurrencyStamp);
-    }
-
-    return new()
-    {
-      OverrideTableName = _tableName,
-      ConditionalExpression = condition,
-    };
-  }
-
-  private LoadConfig GetLoadConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private BatchGetConfig GetBatchGetConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
-
-  private BatchWriteConfig GetBatchWriteConfig() => new()
-  {
-    OverrideTableName = _tableName,
-  };
 
   protected virtual void Dispose(bool disposing)
   {
@@ -1427,4 +1291,10 @@ public class DynamoDbUserStore<TUserEntity> :
   {
     Dispose(false);
   }
+}
+
+/// <summary>A login or passkey that another user holds, which fails the write with the given Identity error.</summary>
+internal sealed class LookupConflictException(IdentityError error) : Exception(error.Description)
+{
+  public IdentityError Error { get; } = error;
 }

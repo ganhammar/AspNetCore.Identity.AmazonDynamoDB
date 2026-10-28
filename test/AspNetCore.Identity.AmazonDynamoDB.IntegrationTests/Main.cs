@@ -16,7 +16,7 @@ public class Main
     var collection = new ServiceCollection()
       .AddIdentityCore<DynamoDbUser>()
       .AddRoles<DynamoDbRole>()
-      .AddDynamoDbStores();
+      .AddDynamoDbStores<DynamoDbUser, DynamoDbRole>();
     var client = new AmazonDynamoDBClient();
 
     var mock = new Mock<IOptionsMonitor<DynamoDbOptions>>();

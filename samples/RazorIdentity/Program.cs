@@ -24,7 +24,7 @@ builder.Services
 builder.Services
     .AddIdentity<DynamoDbUser, DynamoDbRole>()
     .AddDefaultUI()
-    .AddDynamoDbStores()
+    .AddDynamoDbStores<DynamoDbUser, DynamoDbRole>()
     .Configure(options =>
     {
       options.DefaultTableName = "identity-samples-identity-api";

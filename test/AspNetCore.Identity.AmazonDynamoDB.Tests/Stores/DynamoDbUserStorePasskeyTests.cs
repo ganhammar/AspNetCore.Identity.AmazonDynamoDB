@@ -418,7 +418,7 @@ public class DynamoDbUserStorePasskeyTests
     Assert.True(result.Succeeded);
     var write = Assert.Single(GetPasskeyWrites(recorder));
     Assert.Equal(GetSortKey(passkeys[1]), write.PutRequest.Item["SortKey"].S);
-    Assert.Empty(recorder.Requests.OfType<GetItemRequest>());
+    Assert.DoesNotContain(recorder.Requests.OfType<GetItemRequest>(), x => x.Key["SortKey"].S.StartsWith("PASSKEY#"));
     var persisted = await userStore.FindPasskeyAsync(
       new DynamoDbUser { Id = user.Id }, passkeys[1].CredentialId, CancellationToken.None);
     Assert.Equal(5u, persisted!.SignCount);
@@ -479,9 +479,16 @@ public class DynamoDbUserStorePasskeyTests
     return (await userStore.FindByIdAsync(user.Id, CancellationToken.None))!;
   }
 
+  // Passkey items are written in batches when deleted and in transactions with their lookups when put
   private static List<WriteRequest> GetPasskeyWrites(RecordingDynamoDbClient recorder) => recorder.Requests
     .OfType<BatchWriteItemRequest>()
     .SelectMany(x => x.RequestItems.Values.SelectMany(y => y))
+    .Concat(recorder.Requests
+      .OfType<TransactWriteItemsRequest>()
+      .SelectMany(x => x.TransactItems)
+      .Select(x => x.Put is { } put
+        ? new WriteRequest(new PutRequest(put.Item))
+        : new WriteRequest(new DeleteRequest(x.Delete!.Key))))
     .Where(x => (x.PutRequest?.Item ?? x.DeleteRequest?.Key)?["SortKey"].S.StartsWith("PASSKEY#") == true)
     .ToList();
 

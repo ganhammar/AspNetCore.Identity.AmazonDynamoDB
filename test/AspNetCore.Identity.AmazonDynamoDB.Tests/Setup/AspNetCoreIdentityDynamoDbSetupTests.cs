@@ -107,7 +107,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
   }
 
   [Fact]
-  public async Task Should_AddMissingIndex_When_TableAlreadyExists()
+  public async Task Should_CreateTableWithoutIndexes_When_TableIsNew()
   {
     // Arrange
     var tableName = Guid.NewGuid().ToString();
@@ -116,16 +116,6 @@ public class AspNetCoreIdentityDynamoDbSetupTests
       Database = DatabaseFixture.Client,
       DefaultTableName = tableName,
     });
-    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    await DatabaseFixture.Client.UpdateTableAsync(new UpdateTableRequest
-    {
-      TableName = tableName,
-      GlobalSecondaryIndexUpdates = new()
-      {
-        new() { Delete = new() { IndexName = "CredentialId-index" } },
-      },
-    });
-    await WaitUntilIndexIsRemoved(tableName, "CredentialId-index");
 
     try
     {
@@ -134,8 +124,9 @@ public class AspNetCoreIdentityDynamoDbSetupTests
 
       // Assert
       var table = await DatabaseFixture.Client.DescribeTableAsync(tableName);
-      var index = Assert.Single(table.Table.GlobalSecondaryIndexes, x => x.IndexName == "CredentialId-index");
-      Assert.Equal(IndexStatus.ACTIVE, index.IndexStatus);
+      Assert.Equal(TableStatus.ACTIVE, table.Table.TableStatus);
+      Assert.Empty(table.Table.GlobalSecondaryIndexes ?? []);
+      Assert.Equal(2, table.Table.AttributeDefinitions.Count);
     }
     finally
     {
@@ -144,74 +135,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
   }
 
   [Fact]
-  public async Task Should_AddMissingIndex_When_TableIsProvisionedButOptionsAreNot()
-  {
-    // Arrange
-    var tableName = Guid.NewGuid().ToString();
-    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(TestUtils.GetOptions(new()
-    {
-      Database = DatabaseFixture.Client,
-      DefaultTableName = tableName,
-      BillingMode = BillingMode.PROVISIONED,
-    }));
-    await RemoveIndex(tableName, "CredentialId-index");
-
-    try
-    {
-      // Act
-      await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(TestUtils.GetOptions(new()
-      {
-        Database = DatabaseFixture.Client,
-        DefaultTableName = tableName,
-      }));
-
-      // Assert
-      var index = await GetIndex(tableName, "CredentialId-index");
-      Assert.Equal(IndexStatus.ACTIVE, index.IndexStatus);
-      Assert.Equal(1, index.ProvisionedThroughput.ReadCapacityUnits);
-      Assert.Equal(1, index.ProvisionedThroughput.WriteCapacityUnits);
-    }
-    finally
-    {
-      await DatabaseFixture.Client.DeleteTableAsync(tableName);
-    }
-  }
-
-  [Fact]
-  public async Task Should_AddMissingIndex_When_TableIsOnDemandButOptionsAreProvisioned()
-  {
-    // Arrange
-    var tableName = Guid.NewGuid().ToString();
-    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(TestUtils.GetOptions(new()
-    {
-      Database = DatabaseFixture.Client,
-      DefaultTableName = tableName,
-    }));
-    await RemoveIndex(tableName, "CredentialId-index");
-
-    try
-    {
-      // Act
-      await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(TestUtils.GetOptions(new()
-      {
-        Database = DatabaseFixture.Client,
-        DefaultTableName = tableName,
-        BillingMode = BillingMode.PROVISIONED,
-      }));
-
-      // Assert
-      var index = await GetIndex(tableName, "CredentialId-index");
-      Assert.Equal(IndexStatus.ACTIVE, index.IndexStatus);
-      Assert.Equal(0, index.ProvisionedThroughput?.ReadCapacityUnits ?? 0);
-    }
-    finally
-    {
-      await DatabaseFixture.Client.DeleteTableAsync(tableName);
-    }
-  }
-
-  [Fact]
-  public async Task Should_AddMissingIndex_When_SetupRunsConcurrently()
+  public async Task Should_CreateProvisionedTable_When_OptionsAreProvisioned()
   {
     // Arrange
     var tableName = Guid.NewGuid().ToString();
@@ -219,19 +143,19 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     {
       Database = DatabaseFixture.Client,
       DefaultTableName = tableName,
+      BillingMode = BillingMode.PROVISIONED,
+      ProvisionedThroughput = new ProvisionedThroughput { ReadCapacityUnits = 2, WriteCapacityUnits = 3 },
     });
-    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-    await RemoveIndex(tableName, "CredentialId-index");
 
     try
     {
       // Act
-      await Task.WhenAll(Enumerable.Range(0, 3)
-        .Select(_ => AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options)));
+      await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
 
       // Assert
-      var index = await GetIndex(tableName, "CredentialId-index");
-      Assert.Equal(IndexStatus.ACTIVE, index.IndexStatus);
+      var table = await DatabaseFixture.Client.DescribeTableAsync(tableName);
+      Assert.Equal(2, table.Table.ProvisionedThroughput.ReadCapacityUnits);
+      Assert.Equal(3, table.Table.ProvisionedThroughput.WriteCapacityUnits);
     }
     finally
     {
@@ -259,7 +183,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
       // Assert
       var table = await DatabaseFixture.Client.DescribeTableAsync(tableName);
       Assert.Equal(TableStatus.ACTIVE, table.Table.TableStatus);
-      Assert.Equal(7, table.Table.GlobalSecondaryIndexes.Count);
+      Assert.Empty(table.Table.GlobalSecondaryIndexes ?? []);
     }
     finally
     {
@@ -313,25 +237,6 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     }
   }
 
-  // Passkey lookups query the index for all attributes, which DynamoDB only allows when every
-  // attribute is projected, changing the projection breaks earlier versions using the same table
-  [Fact]
-  public async Task Should_ProjectAllAttributes_When_CreatingCredentialIdIndex()
-  {
-    // Arrange
-    var options = TestUtils.GetOptions(new()
-    {
-      Database = DatabaseFixture.Client,
-    });
-
-    // Act
-    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(options);
-
-    // Assert
-    var index = await GetIndex(DatabaseFixture.TableName, "CredentialId-index");
-    Assert.Equal(ProjectionType.ALL, index.Projection.ProjectionType);
-  }
-
   [Fact]
   public async Task Should_LogProgress_When_CreatingTable()
   {
@@ -343,7 +248,7 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     services
       .AddIdentityCore<DynamoDbUser>()
       .AddRoles<DynamoDbRole>()
-      .AddDynamoDbStores()
+      .AddDynamoDbStores<DynamoDbUser, DynamoDbRole>()
       .UseDatabase(DatabaseFixture.Client)
       .SetDefaultTableName(tableName);
 
@@ -360,6 +265,45 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     {
       await DatabaseFixture.Client.DeleteTableAsync(tableName);
     }
+  }
+
+  [Fact]
+  public async Task Should_LogWarning_When_TableHasLegacyIndexes()
+  {
+    // Arrange
+    var database = new Mock<IAmazonDynamoDB>();
+    database
+      .Setup(x => x.DescribeTableAsync(It.IsAny<DescribeTableRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.ACTIVE, LegacyTable.IndexNames));
+    var loggerProvider = new TestLoggerProvider();
+
+    // Act
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(
+      CreateServiceProvider(database.Object, loggerProvider));
+
+    // Assert
+    database.Verify(x => x.UpdateTableAsync(It.IsAny<UpdateTableRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    database.Verify(x => x.ScanAsync(It.IsAny<ScanRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    Assert.Contains(loggerProvider.Entries, x =>
+      x.Level == LogLevel.Warning && x.Message.Contains("indexes of version 2") && x.Message.Contains("NormalizedEmail-index"));
+  }
+
+  [Fact]
+  public async Task Should_NotLogWarning_When_TableHasNoLegacyIndexes()
+  {
+    // Arrange
+    var database = new Mock<IAmazonDynamoDB>();
+    database
+      .Setup(x => x.DescribeTableAsync(It.IsAny<DescribeTableRequest>(), It.IsAny<CancellationToken>()))
+      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.ACTIVE, []));
+    var loggerProvider = new TestLoggerProvider();
+
+    // Act
+    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(
+      CreateServiceProvider(database.Object, loggerProvider));
+
+    // Assert
+    Assert.DoesNotContain(loggerProvider.Entries, x => x.Level == LogLevel.Warning);
   }
 
   [Fact]
@@ -392,41 +336,15 @@ public class AspNetCoreIdentityDynamoDbSetupTests
   }
 
   [Fact]
-  public async Task Should_LogWarning_When_UpdateTableIsDenied()
-  {
-    // Arrange
-    var database = new Mock<IAmazonDynamoDB>();
-    database
-      .Setup(x => x.DescribeTableAsync(It.IsAny<DescribeTableRequest>(), It.IsAny<CancellationToken>()))
-      .ReturnsAsync(CreateDescribeTableResponse(
-        TableStatus.ACTIVE, IndexNames.Where(x => x != "CredentialId-index")));
-    database
-      .Setup(x => x.UpdateTableAsync(It.IsAny<UpdateTableRequest>(), It.IsAny<CancellationToken>()))
-      .ThrowsAsync(new AmazonDynamoDBException("Access denied") { ErrorCode = "AccessDeniedException" });
-    var loggerProvider = new TestLoggerProvider();
-
-    // Act
-    await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(
-      CreateServiceProvider(database.Object, loggerProvider));
-
-    // Assert
-    database.Verify(x => x.UpdateTableAsync(
-      It.Is<UpdateTableRequest>(y => y.GlobalSecondaryIndexUpdates[0].Create.IndexName == "CredentialId-index"),
-      It.IsAny<CancellationToken>()), Times.Once);
-    Assert.Contains(loggerProvider.Entries, x =>
-      x.Level == LogLevel.Warning && x.Message.Contains("Unable to add global secondary index CredentialId-index"));
-  }
-
-  [Fact]
   public async Task Should_WaitForTable_When_ItIsBeingCreatedElsewhere()
   {
     // Arrange
     var database = new Mock<IAmazonDynamoDB>();
     database
       .SetupSequence(x => x.DescribeTableAsync(It.IsAny<DescribeTableRequest>(), It.IsAny<CancellationToken>()))
-      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.CREATING, IndexNames))
-      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.CREATING, IndexNames))
-      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.ACTIVE, IndexNames));
+      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.CREATING, []))
+      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.CREATING, []))
+      .ReturnsAsync(CreateDescribeTableResponse(TableStatus.ACTIVE, []));
 
     // Act
     await AspNetCoreIdentityDynamoDbSetup.EnsureInitializedAsync(
@@ -437,17 +355,6 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     database.Verify(x => x.CreateTableAsync(It.IsAny<CreateTableRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     database.Verify(x => x.UpdateTableAsync(It.IsAny<UpdateTableRequest>(), It.IsAny<CancellationToken>()), Times.Never);
   }
-
-  private static readonly string[] IndexNames =
-  [
-    "NormalizedEmail-index",
-    "NormalizedUserName-index",
-    "ClaimType-ClaimValue-index",
-    "RoleName-index",
-    "LoginProvider-ProviderKey-index",
-    "CredentialId-index",
-    "NormalizedName-index",
-  ];
 
   private static DescribeTableResponse CreateDescribeTableResponse(
     TableStatus tableStatus, IEnumerable<string> indexNames) => new()
@@ -473,44 +380,9 @@ public class AspNetCoreIdentityDynamoDbSetupTests
     return services.BuildServiceProvider();
   }
 
-  private static async Task RemoveIndex(string tableName, string indexName)
-  {
-    await DatabaseFixture.Client.UpdateTableAsync(new UpdateTableRequest
-    {
-      TableName = tableName,
-      GlobalSecondaryIndexUpdates = new()
-      {
-        new() { Delete = new() { IndexName = indexName } },
-      },
-    });
-    await WaitUntilIndexIsRemoved(tableName, indexName);
-  }
-
-  private static async Task<GlobalSecondaryIndexDescription> GetIndex(string tableName, string indexName)
-  {
-    var table = await DatabaseFixture.Client.DescribeTableAsync(tableName);
-    return Assert.Single(table.Table.GlobalSecondaryIndexes, x => x.IndexName == indexName);
-  }
-
-  private static async Task WaitUntilIndexIsRemoved(string tableName, string indexName)
-  {
-    for (var attempt = 0; attempt < 30; attempt++)
-    {
-      var table = await DatabaseFixture.Client.DescribeTableAsync(tableName);
-      if (table.Table.GlobalSecondaryIndexes.TrueForAll(x => x.IndexName != indexName))
-      {
-        return;
-      }
-
-      await Task.Delay(TimeSpan.FromSeconds(1));
-    }
-
-    throw new TimeoutException($"Index {indexName} was not removed from {tableName}");
-  }
-
   private static DynamoDbBuilder CreateBuilder(IServiceCollection services) => services
     .AddIdentityCore<DynamoDbUser>()
     .AddRoles<DynamoDbRole>()
-    .AddDynamoDbStores()
+    .AddDynamoDbStores<DynamoDbUser, DynamoDbRole>()
     .SetDefaultTableName(DatabaseFixture.TableName);
 }

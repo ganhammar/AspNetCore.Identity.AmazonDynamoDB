@@ -297,6 +297,9 @@ public class DynamoDbRoleStoreTests
     };
     await context.SaveAsync(role, new SaveConfig { OverrideTableName = DatabaseFixture.TableName });
 
+    // Items written by version 2 have no lookup items, the migration adds them
+    await DynamoDbTableSetup.MigrateAsync(options.CurrentValue, DatabaseFixture.Client);
+
     // Act
     var foundRole = await roleStore.FindByNameAsync(role.NormalizedName, CancellationToken.None);
 
