@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="2.2.0" />
+    <PackageReference Include="AspNetCore.Identity.AmazonDynamoDB" Version="3.0.0" />
   </ItemGroup>
 
 </Project>
