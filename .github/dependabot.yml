@@ -24,6 +24,10 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: 'Microsoft.Extensions.*'
         update-types: ['version-update:semver-major']
+      # The legacy seeder is the only reference to the published package, and it stays on the
+      # major version the upgrade tests migrate data from
+      - dependency-name: 'AspNetCore.Identity.AmazonDynamoDB'
+        update-types: ['version-update:semver-major']
 
     groups:
       non-major-deps:
